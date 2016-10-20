@@ -1,15 +1,29 @@
-#include "CustomSpellEdit.h"
+#include "CustomEditSpell.h"
 
 #define isalnum(x) isalnum((x), std::locale("Russian_Russia.1251"))
 
-CustomSpellEdit::CustomSpellEdit(TCustomEdit* Sender)
+TextRange::TextRange()
 {
-  edit = Sender;
+  StartPos = -1;
+  Length = -1;
+  IsMisspell = false;
 }
 
-CustomSpellEdit::TextFragment CustomSpellEdit::WordBounds(int Pos)
+TextRange::TextRange(int pos, int len)
 {
-  TextFragment result;
+  StartPos = pos;
+  Length = len;
+  IsMisspell = false;
+}
+
+CustomEditSpell::CustomEditSpell(TCustomEdit* Sender)
+{
+  Component = Sender;
+}
+
+TextRange CustomEditSpell::WordBounds(int Pos)
+{
+  TextRange result;
   std::wstring buf = this->GetText();
 
   if (buf.size() != 0)
@@ -25,12 +39,12 @@ CustomSpellEdit::TextFragment CustomSpellEdit::WordBounds(int Pos)
   return result;
 }
 
-std::wstring CustomSpellEdit::GetText()
+std::wstring CustomEditSpell::GetText()
 {
-  return std::wstring(edit->Text.c_str());
+  return std::wstring(Component->Text.c_str());
 }
 
-void CustomSpellEdit::PerformSpell(std::wstring SubString, int Start)
+void CustomEditSpell::PerformSpell(std::wstring SubString, int Start)
 {
   speller.checkText(SubString);
   

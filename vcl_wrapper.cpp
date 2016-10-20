@@ -3,9 +3,9 @@
 
 #include <vcl.h>
 #include <locale>
-#include "CustomSpellEdit.h"
-#include "SpellCommonEdit.h"
-#include "SpellRichEdit.h"
+#include "CustomEditSpell.h"
+#include "CommonEditSpell.h"
+#include "RichEditSpell.h"
 
 //#define isalnum(x) isalnum((x), std::locale("Russian_Russia.1251"))
 
@@ -16,16 +16,14 @@ class SpellingSetup
     SpellingSetup(ComponentType* Component);
     ~SpellingSetup();
 
-    //ComponentType* CompSpeller;
-
     void __fastcall OnKeyDownWrapper(TObject* Sender, WORD &Key, TShiftState Shift);
     void __fastcall OnKeyPressWrapper(TObject *Sender, wchar_t &Key);
     void __fastcall OnChangeWrapper(TObject* Sender);
 
   private:
-    CustomSpellEdit* CompSpeller;
-    CustomSpellEdit::TextFragment TextState;
-    TShiftState ShiftState;
+    CustomEditSpell* ComponentSpeller;
+    //TShiftState ShiftState;
+    TextRange TextState;
     wchar_t PressedKey;
     int CursorPos;
 
@@ -41,15 +39,15 @@ SpellingSetup<ComponentType>::SpellingSetup(ComponentType* Component)
   Component->OnChange = OnChangeWrapper;
 
   if (__classid(ComponentType) == __classid(TRichEdit))
-    CompSpeller = new SpellRichEdit(Component);
+    ComponentSpeller = new RichEditSpell(Component);
   else
-    CompSpeller = new SpellCommonEdit(Component);
+    ComponentSpeller = new CommonEditSpell(Component);
 }
 
 template <typename ComponentType>
 SpellingSetup<ComponentType>::~SpellingSetup()
 {
-  delete CompSpeller;
+  delete ComponentSpeller;
 }
 
 template <typename ComponentType>
@@ -57,14 +55,14 @@ void __fastcall SpellingSetup<ComponentType>::OnKeyDownWrapper(TObject *Sender, 
 {
   if (isprint(Key, std::locale("Russian_Russia.1251")))
   {
-    TextState = CompSpeller->WordBounds(Object->SelStart);
-    TextState.IsMisspell = CompSpeller->IsMistakeUnderCursor();
-    ShiftState = Shift;
+    TextState = ComponentSpeller->WordBounds(ComponentSpeller->Component->SelStart);
+    TextState.IsMisspell = ComponentSpeller->IsMistakeUnderCursor();
+    //ShiftState = Shift;
 
-    CursorPos = Object->SelStart;
+    CursorPos = ComponentSpeller->Component->SelStart;
 
     if (TextState.IsMisspell)
-      CompSpeller->UnmarkAsMistake(TextState.StartPos, TextState.Length);
+      ComponentSpeller->UnmarkAsMistake(TextState.StartPos, TextState.Length);
   }
 }
 
@@ -77,14 +75,16 @@ void __fastcall SpellingSetup<ComponentType>::OnKeyPressWrapper(TObject *Sender,
 template <typename ComponentType>
 void __fastcall SpellingSetup<ComponentType>::OnChangeWrapper(TObject* Sender)
 {
-  int NewCursorPos = Object->SelStart;
-  int Length;// = NewCursorPos - TextState.CursorPos + TextState.Length;
+  int NewCursorPos = ComponentSpeller->Component->SelStart;
+
+  if (!ComponentSpeller->Component->Modified)
+    return;
 
   if (TextState.IsMisspell || (NewCursorPos - CursorPos == 1 && !isalnum(PressedKey, std::locale("Russian_Russia.1251"))))
   {
     // Длина нового фрагмента + длина слова, в которое он вошёл
-    Length = NewCursorPos - CursorPos + TextState.Length;
-    //CompSpeller->PerformSpell(CompSpeller->GetText().substr(TextState.StartPos, Length), TextState.StartPos);
+    int Length = NewCursorPos - CursorPos + TextState.Length;
+    ComponentSpeller->PerformSpell(ComponentSpeller->GetText().substr(TextState.StartPos, Length), TextState.StartPos);
   }
 }
 

@@ -1,11 +1,11 @@
-#include "SpellRichEdit.h"
+#include "RichEditSpell.h"
 
-TRichEdit* SpellRichEdit::richedit()
+TRichEdit* RichEditSpell::richedit()
 {
-  return static_cast<TRichEdit*>(edit);
+  return static_cast<TRichEdit*>(Component);
 }
 
-/*void SpellRichEdit::WordBounds(int Pos, int& Start, int& Length)
+/*void RichEditSpell::WordBounds(int Pos, int& Start, int& Length)
 {
   Start = richedit()->Perform(EM_FINDWORDBREAK, WB_MOVEWORDLEFT, Pos);
   Length = richedit()->Perform(EM_FINDWORDBREAK, WB_LEFT, richedit()->Perform(EM_FINDWORDBREAK, WB_MOVEWORDRIGHT, Pos));
@@ -16,23 +16,32 @@ TRichEdit* SpellRichEdit::richedit()
   Length -= Start;
 }*/
 
-void SpellRichEdit::MarkAsMistake(int Start, int Length)
+void RichEditSpell::PerformSpell(std::wstring SubString, int Start)
 {
-  int CurPos = richedit()->SelStart;
+  speller.checkText(SubString);
 
   richedit()->Lines->BeginUpdate();
+
+  for (unsigned i = 0; i < speller.result.size(); ++i)
+    MarkAsMistake(Start + speller.result[i].pos, speller.result[i].len);
+
+  richedit()->Modified = false;
+  richedit()->Lines->EndUpdate();
+}
+
+void RichEditSpell::MarkAsMistake(int Start, int Length)
+{
+  int CurPos = richedit()->SelStart;
   
   richedit()->SelStart = Start;
   richedit()->SelLength = Length;
   richedit()->SelAttributes->Color = clRed;
-  
+
   richedit()->SelStart = CurPos;
   richedit()->SelAttributes->Color = clBlack;
-
-  richedit()->Lines->EndUpdate();
 }
 
-void SpellRichEdit::UnmarkAsMistake(int Start, int Length)
+void RichEditSpell::UnmarkAsMistake(int Start, int Length)
 {
   int CurPos = richedit()->SelStart;
 
@@ -43,10 +52,11 @@ void SpellRichEdit::UnmarkAsMistake(int Start, int Length)
   richedit()->SelAttributes->Color = clBlack;
   
   richedit()->SelStart = CurPos;
+  richedit()->Modified = false;
   richedit()->Lines->EndUpdate();
 }
 
-bool SpellRichEdit::IsMistakeUnderCursor()
+bool RichEditSpell::IsMistakeUnderCursor()
 {
   return (richedit()->SelAttributes->Color == clRed);
 }

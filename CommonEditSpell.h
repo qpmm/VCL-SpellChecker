@@ -1,13 +1,13 @@
-#ifndef SPELLCOMMONEDITH
-#define SPELLCOMMONEDITH
+#ifndef COMMONEDITSPELLH
+#define COMMONEDITSPELLH
 
-#include "CustomSpellEdit.h"
+#include "CustomEditSpell.h"
 #include <map>
 
-class SpellCommonEdit : public CustomSpellEdit
+class CommonEditSpell : public CustomEditSpell
 {
   public:
-    SpellCommonEdit(TCustomEdit* Sender) : CustomSpellEdit(Sender) {};
+    CommonEditSpell(TCustomEdit* Sender) : CustomEditSpell(Sender) {};
     
     void MarkAsMistake(int Start, int Length);
     void UnmarkAsMistake(int Start, int Length);

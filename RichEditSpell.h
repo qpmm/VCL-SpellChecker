@@ -1,14 +1,15 @@
-#ifndef SPELLRICHEDITH
-#define SPELLRICHEDITH
+#ifndef RICHEDITSPELLH
+#define RICHEDITSPELLH
 
-#include "CustomSpellEdit.h"
+#include "CustomEditSpell.h"
 
-class SpellRichEdit : public CustomSpellEdit
+class RichEditSpell : public CustomEditSpell
 {
   public:
-    SpellRichEdit(TCustomEdit* Sender) : CustomSpellEdit(Sender) {};
+    RichEditSpell(TCustomEdit* Sender) : CustomEditSpell(Sender) {};
 
     //void WordBounds(int Pos, int& Start, int& Length);
+    void PerformSpell(std::wstring SubString, int Start);
     void MarkAsMistake(int Start, int Length);
     void UnmarkAsMistake(int Start, int Length);
     bool IsMistakeUnderCursor();
