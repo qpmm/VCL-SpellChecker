@@ -15,12 +15,21 @@ void RichEditSpell::MarkAsMisspell(TextRange Range)
   _object->SelStart = Range.StartPos;
   _object->SelLength = Range.Length;
   _object->SelAttributes->Color = clRed;
-
-  _object->SelStart = CurPos;
-  _object->SelAttributes->Color = clBlack;
 }
 
 void RichEditSpell::UnmarkAsMisspell(TextRange Range)
+
+void RichEditSpell::CustomBeginUpdate()
+{
+  _object->Lines->BeginUpdate();
+}
+
+void RichEditSpell::CustomEndUpdate()
+{
+  _object->SelStart = _current_pos;
+  // _object->SelAttributes->Color = clBlack;
+  _object->Lines->EndUpdate();
+}
 
 void RichEditSpell::PerformSpell(TextRange Range)
 

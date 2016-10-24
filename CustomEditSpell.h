@@ -27,11 +27,14 @@ class CustomEditSpell
     virtual bool IsMisspell();
     virtual void MarkAsMisspell(TextRange Range);
     virtual void UnmarkAsMisspell(TextRange Range);
+    virtual void CustomBeginUpdate();
+    virtual void CustomEndUpdate();
     virtual void PerformSpell(TextRange Range);
     virtual void NotifyMisspell();
   
   protected:
     YandexSpeller        _speller;
+    int                  _current_pos;
     
   private:
     TCustomEdit*         _object;

@@ -78,11 +78,25 @@ void CustomEditSpell::UnmarkAsMisspell(TextRange Range)
   _misspell_pool.erase(Range.StartPos);
 }
 
+void CustomEditSpell::CustomBeginUpdate()
+{
+  _current_pos = _object->SelStart;
+}
+
+void CustomEditSpell::CustomEndUpdate()
+{
+  _object->SelStart = _current_pos;
+}
+
 void CustomEditSpell::PerformSpell(TextRange Range)
 {
+  CustomBeginUpdate();
+  
   _speller->checkText(_object->ToStdString(Range));
   for (unsigned i = 0; i < _speller->Result.size(); ++i)
     MarkAsMisspell(Range.StartPos + _speller->Result[i].pos, _speller->Result[i].len);
+  
+  CustomEndUpdate();
 }
 
 void CustomEditSpell::NotifyMisspell()

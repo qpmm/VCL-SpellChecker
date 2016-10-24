@@ -13,16 +13,13 @@ void CustomMemoSpell::UnmarkAsMisspell(TextRange Range)*/
 
 void CustomMemoSpell::PerformSpell(TextRange Range)
 {
-  int CurPos = _object->SelStart;
-  
-  _object->Lines->BeginUpdate();
+  CustomBeginUpdate();
   
   _speller->checkText(_object->ToStdString(Range));
   for (unsigned i = 0; i < _speller->Result.size(); ++i)
     MarkAsMisspell(Range.StartPos + _speller->Result[i].pos, _speller->Result[i].len);
   
-  
-  _object->Lines->EndUpdate();
+  CustomEndUpdate();
 }
 
 //void CustomMemoSpell::NotifyMisspell()
