@@ -1,21 +1,16 @@
-#ifndef RICHEDITSPELLH
-#define RICHEDITSPELLH
+#include "CustomMemoSpell.h"
 
-#include "CustomEditSpell.h"
-
-class RichEditSpell : public CustomEditSpell
+class RichEditSpell : CustomMemoSpell
 {
   public:
-    RichEditSpell(TCustomEdit* Sender) : CustomEditSpell(Sender) {};
-
-    //void WordBounds(int Pos, int& Start, int& Length);
-    void PerformSpell(std::wstring SubString, int Start);
-    void MarkAsMistake(int Start, int Length);
-    void UnmarkAsMistake(int Start, int Length);
-    bool IsMistakeUnderCursor();
-
+    RichEditSpell(TRichEdit* Component);
+    
+    bool IsMisspell();
+    void MarkAsMisspell(TextRange Range);
+    void UnmarkAsMisspell(TextRange Range);
+    void PerformSpell(TextRange Range);
+    void NotifyMisspell();
+  
   private:
-    TRichEdit* richedit();
+    TRichEdit* _object;
 };
-
-#endif

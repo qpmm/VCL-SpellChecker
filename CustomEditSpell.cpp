@@ -1,6 +1,6 @@
 #include "CustomEditSpell.h"
 
-#define isalnum(x) isalnum((x), std::locale("Russian_Russia.1251"))
+/* class TextRange */
 
 TextRange::TextRange()
 {
@@ -9,48 +9,90 @@ TextRange::TextRange()
   IsMisspell = false;
 }
 
-TextRange::TextRange(int pos, int len)
+TextRange::TextRange(int Pos, int Len)
 {
-  StartPos = pos;
-  Length = len;
+  StartPos = Pos;
+  Length = Len;
   IsMisspell = false;
 }
 
-CustomEditSpell::CustomEditSpell(TCustomEdit* Sender)
+/* class CustomEditSpell */
+
+CustomEditSpell::CustomEditSpell(TCustomEdit* Component)
 {
-  Component = Sender;
+  _object = Component;
+  _misspell_pool = new std::map<int, int>();
+  _misspell_hint = new TBalloonHint;
 }
 
-TextRange CustomEditSpell::WordBounds(int Pos)
+CustomEditSpell::~CustomEditSpell()
 {
-  TextRange result;
-  std::wstring buf = this->GetText();
+  delete _misspell_pool;
+  delete _misspell_hint;
+}
+
+// Может отдельная функция не нужна?
+std::wstring CustomEditSpell::ToStdString()
+{
+  return std::wstring(_object->Text.c_str());
+}
+
+std::wstring CustomEditSpell::ToStdString(TextRange Range)
+{
+  _object->SelStart = Range.StartPos;
+  _object->SelLength = Range.Length;
+  
+  return std::wstring(_object->SelText.c_str());
+}
+
+TextRange CustomEditSpell::FindTextRange()
+{
+  int startPos = -1, length = -1;
+  std::wstring buf = ToStdString();
 
   if (buf.size() != 0)
   {
-    result.StartPos = result.Length = Pos;
+    startPos = length = _object->SelStart;
 
-    while (result.StartPos - 1 >= 0 && isalnum(buf[result.StartPos - 1])) --result.StartPos;
-    while (result.Length < (int)buf.size() && isalnum(buf[result.Length])) ++result.Length;
+    while (startPos - 1 >= 0 && isalnum(buf[startPos - 1])) --startPos;
+    while (length < (int)buf.size() && isalnum(buf[length])) ++length;
 
-    result.Length -= result.StartPos;
+    length -= startPos;
   }
 
-  return result;
+  return TextRange(startPos, length);
 }
 
-std::wstring CustomEditSpell::GetText()
+bool CustomEditSpell::IsMisspell()
 {
-  return std::wstring(Component->Text.c_str());
+  return (_misspell_pool.find(FindTextRange().StartPos) != _misspell_pool.end());
 }
 
-void CustomEditSpell::PerformSpell(std::wstring SubString, int Start)
+void CustomEditSpell::MarkAsMisspell(TextRange Range)
 {
-  speller.checkText(SubString);
+  _misspell_pool[Range.StartPos] = Range.Length;
+}
+
+void CustomEditSpell::UnmarkAsMisspell(TextRange Range)
+{
+  _misspell_pool.erase(Range.StartPos);
+}
+
+void CustomEditSpell::PerformSpell(TextRange Range)
+{
+  _speller->checkText(_object->ToStdString(Range));
+  for (unsigned i = 0; i < _speller->Result.size(); ++i)
+    MarkAsMisspell(Range.StartPos + _speller->Result[i].pos, _speller->Result[i].len);
+}
+
+void CustomEditSpell::NotifyMisspell()
+{
+  UnicodeString descr;
   
-  for (unsigned i = 0; i < speller.result.size(); ++i)
-  {
-    MarkAsMistake(Start + speller.result[i].pos, speller.result[i].len);
-  }
+  for (unsigned i = 0; i < _speller->Result.size(); ++i)
+    descr.cat_sprintf(L"%s - %s\n", _speller->Result);
+  
+  _misspell_hint->Title = L"Вы допустили следующие ошибки";
+  _misspell_hint->Description = descr;
+  _misspell_hint->ShowHint();
 }
-

@@ -1,16 +1,12 @@
-#ifndef CUSTOMEDITSPELLH
-#define CUSTOMEDITSPELLH
-
 #include <vcl.h>
-#include <locale>
-#include <string>
-#include "speller.h"
+#include <map>
+#include "YandexSpeller.h"
 
 class TextRange
 {
   public:
     TextRange();
-    TextRange(int pos, int len);
+    TextRange(int Pos, int Len);
 
   int StartPos;
   int Length;
@@ -20,24 +16,25 @@ class TextRange
 class CustomEditSpell
 {
   public:
-    virtual void MarkAsMistake(int Start, int Length) = 0;
-    virtual void UnmarkAsMistake(int Start, int Length) = 0;
-    virtual bool IsMistakeUnderCursor() = 0;
-
-    virtual void PerformSpell(std::wstring SubString, int Start);
-    virtual TextRange WordBounds(int Pos);
-
-    std::wstring GetText();
-
-    TCustomEdit* Component;
+    CustomEditSpell(TCustomEdit* Component);
+    ~CustomEditSpell();
+    
+    // Попробовать сделать виртуальной (для RichEdit)
+    TextRange FindTextRange();
+    std::wstring ToStdString();
+    std::wstring ToStdString(TextRange Range);
+    
+    virtual bool IsMisspell();
+    virtual void MarkAsMisspell(TextRange Range);
+    virtual void UnmarkAsMisspell(TextRange Range);
+    virtual void PerformSpell(TextRange Range);
+    virtual void NotifyMisspell();
   
   protected:
-    CustomEditSpell(TCustomEdit* Sender);
+    YandexSpeller        _speller;
     
-    //TCustomEdit* Component;
-    YandexSpeller speller;
-  
   private:
+    TCustomEdit*         _object;
+    std::map<int, int>*  _misspell_pool;
+    TBalloonHint*        _misspell_hint;
 };
-
-#endif
