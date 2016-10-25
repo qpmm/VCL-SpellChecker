@@ -1,4 +1,4 @@
-#include "CustomEditSpell.h"
+﻿#include "CustomEditSpell.h"
 
 /* class TextRange */
 
@@ -6,14 +6,12 @@ TextRange::TextRange()
 {
   StartPos = -1;
   Length = -1;
-  IsMisspell = false;
 }
 
 TextRange::TextRange(int Pos, int Len)
 {
   StartPos = Pos;
   Length = Len;
-  IsMisspell = false;
 }
 
 /* class CustomEditSpell */
@@ -22,7 +20,7 @@ CustomEditSpell::CustomEditSpell(TCustomEdit* Component)
 {
   _object = Component;
   _misspell_pool = new std::map<int, int>();
-  _misspell_hint = new TBalloonHint;
+  _misspell_hint = new TBalloonHint(Component);
 }
 
 CustomEditSpell::~CustomEditSpell()
@@ -63,19 +61,19 @@ TextRange CustomEditSpell::FindTextRange()
   return TextRange(startPos, length);
 }
 
-bool CustomEditSpell::IsMisspell()
+bool CustomEditSpell::IsMisspell(int Pos)
 {
-  return (_misspell_pool.find(FindTextRange().StartPos) != _misspell_pool.end());
+  return (_misspell_pool->find(Pos) != _misspell_pool->end());
 }
 
 void CustomEditSpell::MarkAsMisspell(TextRange Range)
 {
-  _misspell_pool[Range.StartPos] = Range.Length;
+  (*_misspell_pool)[Range.StartPos] = Range.Length;
 }
 
 void CustomEditSpell::UnmarkAsMisspell(TextRange Range)
 {
-  _misspell_pool.erase(Range.StartPos);
+  _misspell_pool->erase(Range.StartPos);
 }
 
 void CustomEditSpell::CustomBeginUpdate()
@@ -92,21 +90,26 @@ void CustomEditSpell::PerformSpell(TextRange Range)
 {
   CustomBeginUpdate();
   
-  _speller->checkText(_object->ToStdString(Range));
-  for (unsigned i = 0; i < _speller->Result.size(); ++i)
-    MarkAsMisspell(Range.StartPos + _speller->Result[i].pos, _speller->Result[i].len);
+  _speller.CheckText(ToStdString(Range));
+  for (unsigned i = 0; i < _speller.Result.size(); ++i)
+  {
+    Range.StartPos += _speller.Result[i].pos;
+    Range.Length = _speller.Result[i].len;
+    MarkAsMisspell(Range);
+  }
   
   CustomEndUpdate();
+  NotifyMisspell();
 }
 
 void CustomEditSpell::NotifyMisspell()
 {
   UnicodeString descr;
   
-  for (unsigned i = 0; i < _speller->Result.size(); ++i)
-    descr.cat_sprintf(L"%s - %s\n", _speller->Result);
+  for (unsigned i = 0; i < _speller.Result.size(); ++i)
+    descr.cat_sprintf(L"%s - %s\n", _speller.Result);
   
   _misspell_hint->Title = L"Вы допустили следующие ошибки";
   _misspell_hint->Description = descr;
-  _misspell_hint->ShowHint();
+  _misspell_hint->ShowHint(_object->BoundsRect.BottomRight());
 }

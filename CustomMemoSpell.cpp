@@ -1,25 +1,18 @@
 #include "CustomMemoSpell.h"
 
-CustomMemoSpell::CustomMemoSpell(TCustomMemo* Component)
+CustomMemoSpell::CustomMemoSpell(TCustomMemo* Component) : CustomEditSpell(Component)
 {
   _object = Component;
 }
 
-/*bool CustomMemoSpell::IsMisspell()
-
-void CustomMemoSpell::MarkAsMisspell(TextRange Range)
-
-void CustomMemoSpell::UnmarkAsMisspell(TextRange Range)*/
-
-void CustomMemoSpell::PerformSpell(TextRange Range)
+void CustomMemoSpell::CustomBeginUpdate()
 {
-  CustomBeginUpdate();
-  
-  _speller->checkText(_object->ToStdString(Range));
-  for (unsigned i = 0; i < _speller->Result.size(); ++i)
-    MarkAsMisspell(Range.StartPos + _speller->Result[i].pos, _speller->Result[i].len);
-  
-  CustomEndUpdate();
+  _current_pos = _object->SelStart;
+  _object->Lines->BeginUpdate();
 }
 
-//void CustomMemoSpell::NotifyMisspell()
+void CustomMemoSpell::CustomEndUpdate()
+{
+  _object->SelStart = _current_pos;
+  _object->Lines->EndUpdate();
+}

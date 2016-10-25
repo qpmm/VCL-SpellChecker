@@ -1,11 +1,11 @@
 #include "RichEditSpell.h"
 
-RichEditSpell::RichEditSpell(TRichEdit* Component)
+RichEditSpell::RichEditSpell(TRichEdit* Component) : CustomMemoSpell(Component)
 {
   _object = Component;
 }
     
-bool RichEditSpell::IsMisspell()
+bool RichEditSpell::IsMisspell(int Pos)
 {
   return (_object->SelAttributes->Color == clRed);
 }
@@ -18,19 +18,22 @@ void RichEditSpell::MarkAsMisspell(TextRange Range)
 }
 
 void RichEditSpell::UnmarkAsMisspell(TextRange Range)
-
-void RichEditSpell::CustomBeginUpdate()
 {
-  _object->Lines->BeginUpdate();
+  _object->SelStart = Range.StartPos;
+  _object->SelLength = Range.Length;
+  _object->SelAttributes->Color = clBlack;
 }
 
 void RichEditSpell::CustomEndUpdate()
 {
+  _object->SelLength = 0;
   _object->SelStart = _current_pos;
   // _object->SelAttributes->Color = clBlack;
+  _object->Modified = false;
   _object->Lines->EndUpdate();
 }
 
-void RichEditSpell::PerformSpell(TextRange Range)
-
 void RichEditSpell::NotifyMisspell()
+{
+  return;
+}

@@ -1,16 +1,18 @@
+#ifndef CustomMemoSpellH
+#define CustomMemoSpellH
+
 #include "CustomEditSpell.h"
 
-class CustomMemoSpell : CustomEditSpell
+class CustomMemoSpell : protected CustomEditSpell
 {
   public:
     CustomMemoSpell(TCustomMemo* Component);
     
-    /*virtual bool IsMisspell();
-    virtual void MarkAsMisspell(TextRange Range);
-    virtual void UnmarkAsMisspell(TextRange Range);*/
-    virtual void PerformSpell(TextRange Range);
-    //virtual void NotifyMisspell();
+    virtual void CustomBeginUpdate();
+    virtual void CustomEndUpdate();
     
   private:
     TCustomMemo* _object;
 };
+
+#endif

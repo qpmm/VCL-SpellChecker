@@ -1,18 +1,21 @@
+#ifndef RichEditSpellH
+#define RichEditSpellH
+
 #include "CustomMemoSpell.h"
 
-class RichEditSpell : CustomMemoSpell
+class RichEditSpell : protected CustomMemoSpell
 {
   public:
     RichEditSpell(TRichEdit* Component);
     
-    bool IsMisspell();
+    bool IsMisspell(int Pos);
     void MarkAsMisspell(TextRange Range);
     void UnmarkAsMisspell(TextRange Range);
-    void CustomBeginUpdate();
     void CustomEndUpdate();
-    void PerformSpell(TextRange Range);
     void NotifyMisspell();
   
   private:
     TRichEdit* _object;
 };
+
+#endif

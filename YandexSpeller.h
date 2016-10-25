@@ -1,5 +1,5 @@
-#ifndef spellerH
-#define spellerH
+#ifndef YandexSpellerH
+#define YandexSpellerH
 
 #include <IdHTTP.hpp>
 #include <DBXJSON.hpp>

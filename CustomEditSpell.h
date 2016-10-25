@@ -1,3 +1,6 @@
+﻿#ifndef CustomEditSpellH
+#define CustomEditSpellH
+
 #include <vcl.h>
 #include <map>
 #include "YandexSpeller.h"
@@ -10,7 +13,6 @@ class TextRange
 
   int StartPos;
   int Length;
-  bool IsMisspell;
 };
 
 class CustomEditSpell
@@ -24,7 +26,7 @@ class CustomEditSpell
     std::wstring ToStdString();
     std::wstring ToStdString(TextRange Range);
     
-    virtual bool IsMisspell();
+    virtual bool IsMisspell(int Pos);
     virtual void MarkAsMisspell(TextRange Range);
     virtual void UnmarkAsMisspell(TextRange Range);
     virtual void CustomBeginUpdate();
@@ -41,3 +43,5 @@ class CustomEditSpell
     std::map<int, int>*  _misspell_pool;
     TBalloonHint*        _misspell_hint;
 };
+
+#endif
