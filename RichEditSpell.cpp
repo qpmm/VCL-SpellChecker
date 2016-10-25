@@ -12,25 +12,24 @@ bool RichEditSpell::IsMisspell(int Pos)
 
 void RichEditSpell::MarkAsMisspell(TextRange Range)
 {
-  _object->SelStart = Range.StartPos;
+  _object->SelStart  = Range.StartPos;
   _object->SelLength = Range.Length;
   _object->SelAttributes->Color = clRed;
 }
 
 void RichEditSpell::UnmarkAsMisspell(TextRange Range)
 {
-  _object->SelStart = Range.StartPos;
+  _object->SelStart  = Range.StartPos;
   _object->SelLength = Range.Length;
   _object->SelAttributes->Color = clBlack;
 }
 
 void RichEditSpell::CustomEndUpdate()
 {
-  _object->SelLength = 0;
   _object->SelStart = _current_pos;
   // _object->SelAttributes->Color = clBlack;
   _object->Modified = false;
-  _object->Lines->EndUpdate();
+  //_object->Lines->EndUpdate();
 }
 
 void RichEditSpell::NotifyMisspell()

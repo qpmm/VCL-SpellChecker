@@ -3,7 +3,7 @@
 
 #include "CustomMemoSpell.h"
 
-class RichEditSpell : protected CustomMemoSpell
+class RichEditSpell : public CustomMemoSpell
 {
   public:
     RichEditSpell(TRichEdit* Component);

@@ -1,4 +1,4 @@
-#include "speller.h"
+#include "YandexSpeller.h"
 
 YandexSpeller::YandexSpeller()
 {
@@ -28,7 +28,7 @@ TJSONArray* YandexSpeller::MakeRequest(std::wstring Content)
 
 void YandexSpeller::CheckText(std::wstring Text)
 {
-  Result = ParseJSON(MakeRequest(Text));
+  ParseJSON(MakeRequest(Text));
 }
 
 bool YandexSpeller::CheckWord(std::wstring Word)
@@ -36,7 +36,7 @@ bool YandexSpeller::CheckWord(std::wstring Word)
   return (MakeRequest(Word)->Size() == 0);
 }
 
-void YandexSpeller::clear()
+void YandexSpeller::Clear()
 {
   Result.clear();
 }

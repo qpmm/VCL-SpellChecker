@@ -1,5 +1,7 @@
 ﻿#include "CustomEditSpell.h"
 
+#define ISALNUM(x) isalnum((x), std::locale("Russian_Russia.1251"))
+
 /* class TextRange */
 
 TextRange::TextRange()
@@ -52,8 +54,8 @@ TextRange CustomEditSpell::FindTextRange()
   {
     startPos = length = _object->SelStart;
 
-    while (startPos - 1 >= 0 && isalnum(buf[startPos - 1])) --startPos;
-    while (length < (int)buf.size() && isalnum(buf[length])) ++length;
+    while (startPos - 1 >= 0 && ISALNUM(buf[startPos - 1])) --startPos;
+    while (length < (int)buf.size() && ISALNUM(buf[length])) ++length;
 
     length -= startPos;
   }

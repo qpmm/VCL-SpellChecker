@@ -3,7 +3,7 @@
 
 #include "CustomEditSpell.h"
 
-class CustomMemoSpell : protected CustomEditSpell
+class CustomMemoSpell : public CustomEditSpell
 {
   public:
     CustomMemoSpell(TCustomMemo* Component);

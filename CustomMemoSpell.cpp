@@ -8,7 +8,7 @@ CustomMemoSpell::CustomMemoSpell(TCustomMemo* Component) : CustomEditSpell(Compo
 void CustomMemoSpell::CustomBeginUpdate()
 {
   _current_pos = _object->SelStart;
-  _object->Lines->BeginUpdate();
+  //_object->Lines->BeginUpdate();
 }
 
 void CustomMemoSpell::CustomEndUpdate()

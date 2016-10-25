@@ -3,6 +3,7 @@
 
 #include <vcl.h>
 #include <map>
+#include <locale>
 #include "YandexSpeller.h"
 
 class TextRange
