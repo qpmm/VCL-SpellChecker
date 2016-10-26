@@ -12,6 +12,8 @@ class TextRange
     TextRange();
     TextRange(int Pos, int Len);
 
+    bool operator==(TextRange rvl);
+
   int StartPos;
   int Length;
 };
@@ -19,12 +21,12 @@ class TextRange
 class CustomEditSpell
 {
   public:
-    CustomEditSpell(TCustomEdit* Component);
+    CustomEditSpell(TForm* Form, TCustomEdit* Component);
     ~CustomEditSpell();
     
     // Попробовать сделать виртуальной (для RichEdit)
     TextRange FindTextRange();
-    std::wstring ToStdString();
+    virtual std::wstring ToStdString();
     std::wstring ToStdString(TextRange Range);
     
     virtual bool IsMisspell(int Pos);
@@ -34,10 +36,11 @@ class CustomEditSpell
     virtual void CustomEndUpdate();
     virtual void PerformSpell(TextRange Range);
     virtual void NotifyMisspell();
-  
+
   protected:
+    TForm*               _mainform;
     YandexSpeller        _speller;
-    int                  _current_pos;
+    TextRange            _current_sel;
     
   private:
     TCustomEdit*         _object;

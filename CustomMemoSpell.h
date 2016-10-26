@@ -6,10 +6,12 @@
 class CustomMemoSpell : public CustomEditSpell
 {
   public:
-    CustomMemoSpell(TCustomMemo* Component);
-    
+    CustomMemoSpell(TForm* Form, TCustomMemo* Component);
+
     virtual void CustomBeginUpdate();
     virtual void CustomEndUpdate();
+
+    virtual std::wstring ToStdString();
     
   private:
     TCustomMemo* _object;

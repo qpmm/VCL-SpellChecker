@@ -7,21 +7,27 @@
 TextRange::TextRange()
 {
   StartPos = -1;
-  Length = -1;
+  Length   = -1;
 }
 
 TextRange::TextRange(int Pos, int Len)
 {
   StartPos = Pos;
-  Length = Len;
+  Length   = Len;
+}
+
+bool TextRange::operator==(TextRange rvl)
+{
+  return (StartPos == rvl.StartPos && Length == rvl.Length);
 }
 
 /* class CustomEditSpell */
 
-CustomEditSpell::CustomEditSpell(TCustomEdit* Component)
+CustomEditSpell::CustomEditSpell(TForm* Form, TCustomEdit* Component)
 {
+  _mainform = Form;
   _object = Component;
-  _misspell_pool = new std::map<int, int>();
+  _misspell_pool = new std::map<int, int>;
   _misspell_hint = new TBalloonHint(Component);
 }
 
@@ -39,7 +45,7 @@ std::wstring CustomEditSpell::ToStdString()
 
 std::wstring CustomEditSpell::ToStdString(TextRange Range)
 {
-  _object->SelStart = Range.StartPos;
+  _object->SelStart  = Range.StartPos;
   _object->SelLength = Range.Length;
   
   return std::wstring(_object->SelText.c_str());
@@ -47,20 +53,26 @@ std::wstring CustomEditSpell::ToStdString(TextRange Range)
 
 TextRange CustomEditSpell::FindTextRange()
 {
-  int startPos = -1, length = -1;
+  int start = -1, len = -1;
   std::wstring buf = ToStdString();
 
   if (buf.size() != 0)
   {
-    startPos = length = _object->SelStart;
+    start = len = _object->SelStart;
 
-    while (startPos - 1 >= 0 && ISALNUM(buf[startPos - 1])) --startPos;
-    while (length < (int)buf.size() && ISALNUM(buf[length])) ++length;
+    while (start - 1 >= 0 && ISALNUM(buf[start - 1])) --start;
+    while (len < (int)buf.size() && ISALNUM(buf[len])) ++len;
 
-    length -= startPos;
+    len -= start;
+
+    if (len == 0)
+    {
+      start = -1;
+      len = -1;
+    }
   }
 
-  return TextRange(startPos, length);
+  return TextRange(start, len);
 }
 
 bool CustomEditSpell::IsMisspell(int Pos)
@@ -80,28 +92,30 @@ void CustomEditSpell::UnmarkAsMisspell(TextRange Range)
 
 void CustomEditSpell::CustomBeginUpdate()
 {
-  _current_pos = _object->SelStart;
+  _current_sel.StartPos = _object->SelStart;
+  //_current_sel.Length   = _object->SelLength;
 }
 
 void CustomEditSpell::CustomEndUpdate()
 {
-  _object->SelStart = _current_pos;
+  _object->SelStart  = _current_sel.StartPos;
+  //_object->SelLength = _current_sel.Length;
 }
 
 void CustomEditSpell::PerformSpell(TextRange Range)
 {
-  CustomBeginUpdate();
-  
   _speller.CheckText(ToStdString(Range));
-  for (unsigned i = 0; i < _speller.Result.size(); ++i)
+
+  if (_speller.Result.size())
   {
-    Range.StartPos += _speller.Result[i].pos;
-    Range.Length = _speller.Result[i].len;
-    MarkAsMisspell(Range);
+    CustomBeginUpdate();
+
+    for (unsigned i = 0; i < _speller.Result.size(); ++i)
+      MarkAsMisspell(TextRange(Range.StartPos + _speller.Result[i].pos, _speller.Result[i].len));
+
+    CustomEndUpdate();
+    NotifyMisspell();
   }
-  
-  CustomEndUpdate();
-  NotifyMisspell();
 }
 
 void CustomEditSpell::NotifyMisspell()
@@ -109,9 +123,9 @@ void CustomEditSpell::NotifyMisspell()
   UnicodeString descr;
   
   for (unsigned i = 0; i < _speller.Result.size(); ++i)
-    descr.cat_sprintf(L"%s - %s\n", _speller.Result);
+    descr.cat_sprintf(L"%s - %s\n", _speller.Result[i].word.c_str(), _speller.Result[i].s.c_str());
   
   _misspell_hint->Title = L"Вы допустили следующие ошибки";
   _misspell_hint->Description = descr;
-  _misspell_hint->ShowHint(_object->BoundsRect.BottomRight());
+  _misspell_hint->ShowHint(_mainform->ClientToScreen(_object->BoundsRect.BottomRight()));
 }

@@ -6,7 +6,7 @@
 class RichEditSpell : public CustomMemoSpell
 {
   public:
-    RichEditSpell(TRichEdit* Component);
+    RichEditSpell(TForm* Form, TRichEdit* Component);
     
     bool IsMisspell(int Pos);
     void MarkAsMisspell(TextRange Range);
