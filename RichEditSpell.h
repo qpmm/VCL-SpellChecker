@@ -15,7 +15,7 @@ class RichEditSpell : public CustomMemoSpell
     void NotifyMisspell();
   
   private:
-    TRichEdit* _object;
+    TRichEdit* _component;
 };
 
 #endif

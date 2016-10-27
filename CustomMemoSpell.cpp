@@ -3,29 +3,29 @@
 CustomMemoSpell::CustomMemoSpell(TForm* Form, TCustomMemo* Component) : CustomEditSpell(Form, Component)
 {
   _mainform = Form;
-  _object = Component;
+  _component = Component;
 }
 
 void CustomMemoSpell::CustomBeginUpdate()
 {
-  _current_sel.StartPos = _object->SelStart;
-  //_current_sel.Length   = _object->SelLength;
-  //_object->Lines->BeginUpdate();
+  _current_sel.StartPos = _component->SelStart;
+  //_current_sel.Length   = _component->SelLength;
+  //_component->Lines->BeginUpdate();
 }
 
 void CustomMemoSpell::CustomEndUpdate()
 {
-  _object->SelStart  = _current_sel.StartPos;
-  //_object->SelLength = _current_sel.Length;
-  //_object->Lines->EndUpdate();
+  _component->SelStart  = _current_sel.StartPos;
+  //_component->SelLength = _current_sel.Length;
+  //_component->Lines->EndUpdate();
 }
 
 std::wstring CustomMemoSpell::ToStdString()
 {
   CustomBeginUpdate();
 
-  _object->SelectAll();
-  std::wstring result = _object->SelText.c_str();
+  _component->SelectAll();
+  std::wstring result = _component->SelText.c_str();
 
   CustomEndUpdate();
 

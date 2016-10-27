@@ -3,35 +3,35 @@
 RichEditSpell::RichEditSpell(TForm* Form, TRichEdit* Component) : CustomMemoSpell(Form, Component)
 {
   _mainform = Form;
-  _object = Component;
+  _component = Component;
 }
     
 bool RichEditSpell::IsMisspell(int Pos)
 {
-  return (_object->SelAttributes->Color == clRed);
+  return (_component->SelAttributes->Color == clRed);
 }
 
 void RichEditSpell::MarkAsMisspell(TextRange Range)
 {
-  _object->SelStart  = Range.StartPos;
-  _object->SelLength = Range.Length;
-  _object->SelAttributes->Color = clRed;
+  _component->SelStart  = Range.StartPos;
+  _component->SelLength = Range.Length;
+  _component->SelAttributes->Color = clRed;
 }
 
 void RichEditSpell::UnmarkAsMisspell(TextRange Range)
 {
-  _object->SelStart  = Range.StartPos;
-  _object->SelLength = Range.Length;
-  _object->SelAttributes->Color = clBlack;
+  _component->SelStart  = Range.StartPos;
+  _component->SelLength = Range.Length;
+  _component->SelAttributes->Color = clBlack;
 }
 
 void RichEditSpell::CustomEndUpdate()
 {
-  _object->SelStart  = _current_sel.StartPos;
-  //_object->SelLength = _current_sel.Length;
-  _object->SelAttributes->Color = clBlack;
-  _object->Modified = false;
-  //_object->Lines->EndUpdate();
+  _component->SelStart  = _current_sel.StartPos;
+  //_component->SelLength = _current_sel.Length;
+  _component->SelAttributes->Color = clBlack;
+  _component->Modified = false;
+  //_component->Lines->EndUpdate();
 }
 
 void RichEditSpell::NotifyMisspell()

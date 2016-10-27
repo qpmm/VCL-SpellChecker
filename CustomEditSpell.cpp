@@ -16,9 +16,15 @@ TextRange::TextRange(int Pos, int Len)
   Length   = Len;
 }
 
+int TextRange::EndPos()
+{
+  return StartPos + Length;
+}
+
 bool TextRange::operator==(TextRange rvl)
 {
-  return (StartPos == rvl.StartPos && Length == rvl.Length);
+  return (   StartPos == rvl.StartPos
+          && Length   == rvl.Length);
 }
 
 /* class CustomEditSpell */
@@ -26,7 +32,7 @@ bool TextRange::operator==(TextRange rvl)
 CustomEditSpell::CustomEditSpell(TForm* Form, TCustomEdit* Component)
 {
   _mainform = Form;
-  _object = Component;
+  _component = Component;
   _misspell_pool = new std::map<int, int>;
   _misspell_hint = new TBalloonHint(Component);
 }
@@ -40,15 +46,15 @@ CustomEditSpell::~CustomEditSpell()
 // Может отдельная функция не нужна?
 std::wstring CustomEditSpell::ToStdString()
 {
-  return std::wstring(_object->Text.c_str());
+  return std::wstring(_component->Text.c_str());
 }
 
 std::wstring CustomEditSpell::ToStdString(TextRange Range)
 {
-  _object->SelStart  = Range.StartPos;
-  _object->SelLength = Range.Length;
+  _component->SelStart  = Range.StartPos;
+  _component->SelLength = Range.Length;
   
-  return std::wstring(_object->SelText.c_str());
+  return std::wstring(_component->SelText.c_str());
 }
 
 TextRange CustomEditSpell::FindTextRange()
@@ -58,7 +64,7 @@ TextRange CustomEditSpell::FindTextRange()
 
   if (buf.size() != 0)
   {
-    start = len = _object->SelStart;
+    start = len = _component->SelStart;
 
     while (start - 1 >= 0 && ISALNUM(buf[start - 1])) --start;
     while (len < (int)buf.size() && ISALNUM(buf[len])) ++len;
@@ -92,14 +98,14 @@ void CustomEditSpell::UnmarkAsMisspell(TextRange Range)
 
 void CustomEditSpell::CustomBeginUpdate()
 {
-  _current_sel.StartPos = _object->SelStart;
-  //_current_sel.Length   = _object->SelLength;
+  _current_sel.StartPos = _component->SelStart;
+  //_current_sel.Length   = _component->SelLength;
 }
 
 void CustomEditSpell::CustomEndUpdate()
 {
-  _object->SelStart  = _current_sel.StartPos;
-  //_object->SelLength = _current_sel.Length;
+  _component->SelStart  = _current_sel.StartPos;
+  //_component->SelLength = _current_sel.Length;
 }
 
 void CustomEditSpell::PerformSpell(TextRange Range)
@@ -127,5 +133,5 @@ void CustomEditSpell::NotifyMisspell()
   
   _misspell_hint->Title = L"Вы допустили следующие ошибки";
   _misspell_hint->Description = descr;
-  _misspell_hint->ShowHint(_mainform->ClientToScreen(_object->BoundsRect.BottomRight()));
+  _misspell_hint->ShowHint(_mainform->ClientToScreen(_component->BoundsRect.BottomRight()));
 }

@@ -12,6 +12,7 @@ class TextRange
     TextRange();
     TextRange(int Pos, int Len);
 
+    int EndPos();
     bool operator==(TextRange rvl);
 
   int StartPos;
@@ -43,7 +44,7 @@ class CustomEditSpell
     TextRange            _current_sel;
     
   private:
-    TCustomEdit*         _object;
+    TCustomEdit*         _component;
     std::map<int, int>*  _misspell_pool;
     TBalloonHint*        _misspell_hint;
 };

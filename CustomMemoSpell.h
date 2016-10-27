@@ -14,7 +14,7 @@ class CustomMemoSpell : public CustomEditSpell
     virtual std::wstring ToStdString();
     
   private:
-    TCustomMemo* _object;
+    TCustomMemo* _component;
 };
 
 #endif
