@@ -12,6 +12,7 @@ struct WordUnderCursor
 {
   TextRange  Bounds;
   int        CursorPos;
+  WORD       RawKey;
   wchar_t    PressedKey;
   bool       Misspelled;
 };
@@ -22,7 +23,8 @@ class SpellingSetup
   public:
     SpellingSetup()
     {
-      _speller = _component = NULL;
+      _speller = NULL;
+      _component = NULL;
     }
     ~SpellingSetup()
     {
@@ -55,6 +57,10 @@ void SpellingSetup<CustomEditType>::Init(TForm* Form, CustomEditType* Component)
   _component->OnClick    = OnClickWrapper;
 
   _speller = new RichEditSpell(_mainform, _component);
+
+  memset(&_current_word, 0, sizeof(_current_word));
+  _current_word.CursorPos = _component->SelStart;
+  _current_word.Bounds = _speller->FindTextRange();
   
   /*if (__classid(CustomEditType) == __classid(TRichEdit))
     _speller = new RichEditSpell(_mainform, _component);
@@ -62,33 +68,39 @@ void SpellingSetup<CustomEditType>::Init(TForm* Form, CustomEditType* Component)
     _speller = new CustomMemoSpell(_mainform, _component);
   else
     _speller = new CustomEditSpell(_mainform, _component);
-    */
+  */
 }
 
 template<typename CustomEditType>
 void SpellingSetup<CustomEditType>::UpdateCurrentWord()
 {
+  /*int cursorPos = _component->SelStart;
+  
+  if (!(   cursorPos >= _current_word.Bounds.StartPos - 1
+        && cursorPos <= _current_word.Bounds.EndPos() + 1))
+  {
+    _speller->PerformSpell(_current_word.Bounds);
+  }
+    
   _current_word.Bounds = _speller->FindTextRange();
   _current_word.CursorPos = cursorPos;
   _current_word.PressedKey = L'\0';
   _current_word.Misspelled = _speller->IsMisspell();
+  */
 }
 
 template<typename CustomEditType>
 void __fastcall SpellingSetup<CustomEditType>::OnKeyDownWrapper(TObject* Sender, WORD& Key, TShiftState Shift)
 {
-  /*memset(&_current_word, 0, sizeof(_current_word));
+  _current_word.CursorPos = _component->SelStart;
+  _current_word.PressedKey = '\0';
+	_current_word.RawKey = Key;
 
-  if (ISMODIF(Key))
-  {
-    _current_word.CursorPos = _component->SelStart;
-    _current_word.Bounds = _speller->FindTextRange();
-    _current_word.Missp
-    elled = _speller->IsMisspell(_current_word.Bounds.StartPos);
-    
-    if (_current_word.Misspelled)
-      _speller->UnmarkAsMisspell(_current_word.Bounds);
-  }*/
+	if (_current_word.Misspelled)
+	{
+		_speller->UnmarkAsMisspell(_current_word.Bounds);
+		_current_word.Misspelled = false;
+	}
 }
 
 template<typename CustomEditType>
@@ -100,37 +112,73 @@ void __fastcall SpellingSetup<CustomEditType>::OnKeyPressWrapper(TObject* Sender
 template<typename CustomEditType>
 void __fastcall SpellingSetup<CustomEditType>::OnChangeWrapper(TObject* Sender)
 {
-  if (ISDELIM(_current_word.PressedKey))
-  {
-    _current_word.Bounds.StartPos = 0;
-    _current_word.Bounds.Length = _speller->ToStdString().size();
-    _speller->PerformSpell(_current_word.Bounds);
-  }
+  int CurrentPos = _component->SelStart;
+	int CurPosDiff = CurrentPos - _current_word.CursorPos;
 
-  /*int CurPosDiff = _component->SelStart - _current_word.CursorPos;
-  
-  if (CurPosDiff < -1)
-  {
-    MessageBox(NULL, L" ак ты это сделал?", L"Ёй.", MB_OK);
+  if (_component->Tag)
     return;
-  }
-  
-  if (!_current_word.Misspelled && !ISDELIM(_current_word.PressedKey))
-    return;
-  
-  _current_word.Bounds.Length += CurPosDiff - 1;
-  _speller->PerformSpell(_current_word.Bounds);*/
+
+	if (_current_word.RawKey == VK_BACK)
+	{
+		if (   _current_word.Bounds.StartPos == _current_word.CursorPos
+			  || _current_word.Bounds.Length == 0)
+		{
+			_current_word.Bounds = _speller->FindTextRange();
+      _current_word.Misspelled = _speller->IsMisspell(_current_word.Bounds.StartPos);
+		}
+		else
+		{
+			_current_word.Bounds.Length -= 1;
+			//return;
+		}
+	}
+	else if (_current_word.RawKey == VK_DELETE)
+	{
+		if (   _current_word.Bounds.EndPos() == _current_word.CursorPos
+			  || _current_word.Bounds.Length == 0)
+		{
+			_current_word.Bounds = _speller->FindTextRange();
+      _current_word.Misspelled = _speller->IsMisspell(_current_word.Bounds.StartPos);
+		}
+		else
+		{
+			_current_word.Bounds.Length -= 1;
+			//return;
+		}
+	}
+
+	if (_current_word.Misspelled || ISDELIM(_current_word.PressedKey) || CurPosDiff > 1)
+	{
+		_current_word.Bounds.Length += CurPosDiff; // ctrl-x ???
+		_speller->PerformSpell(_current_word.Bounds);
+		_current_word.Bounds = _speller->FindTextRange();
+		_current_word.Misspelled = _speller->IsMisspell(_current_word.Bounds.StartPos);
+	}
+	else
+	{
+    _current_word.CursorPos = CurrentPos;
+		if (_current_word.RawKey != VK_BACK && _current_word.RawKey != VK_DELETE)
+		{
+			_current_word.Bounds.Length += CurPosDiff;
+		}
+	}
 }
 
 template<typename CustomEditType>
 void __fastcall SpellingSetup<CustomEditType>::OnClickWrapper(TObject* Sender)
 {
   int cursorPos = _component->SelStart;
-  
-  if (!(   cursorPos > _current_word.Bounds.StartPos
-        && cursorPos < _current_word.Bounds.EndPos()))
-  {
-    _speller->PerformSpell(_current_word.Bounds);
-    UpdateCurrentWord();
+
+	if (   !_current_word.Misspelled
+      && _current_word.Bounds.Length
+      && !(cursorPos >= _current_word.Bounds.StartPos && cursorPos <= _current_word.Bounds.EndPos()))
+	{
+		_speller->PerformSpell(_current_word.Bounds);
   }
+
+  _current_word.Bounds = _speller->FindTextRange();
+  _current_word.CursorPos = cursorPos;
+  _current_word.RawKey = 0;
+  _current_word.PressedKey = L'\0';
+  _current_word.Misspelled = _speller->IsMisspell(_current_word.Bounds.StartPos);
 }

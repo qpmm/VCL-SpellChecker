@@ -2,6 +2,8 @@
 #define RichEditSpellH
 
 #include "CustomMemoSpell.h"
+#include <richole.h>
+#include <tom.h>
 
 class RichEditSpell : public CustomMemoSpell
 {
@@ -15,7 +17,11 @@ class RichEditSpell : public CustomMemoSpell
     void NotifyMisspell();
   
   private:
-    TRichEdit* _component;
+    TRichEdit*     _component;
+    ITextDocument* _text;
+    ITextFont*     _style;
+    ITextRange*    _seltext;
+    IUnknown*      _ole;
 };
 
 #endif

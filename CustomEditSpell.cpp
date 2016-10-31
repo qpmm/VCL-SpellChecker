@@ -51,15 +51,22 @@ std::wstring CustomEditSpell::ToStdString()
 
 std::wstring CustomEditSpell::ToStdString(TextRange Range)
 {
+  std::wstring result;
+
+  CustomBeginUpdate();
+
   _component->SelStart  = Range.StartPos;
   _component->SelLength = Range.Length;
+  result = _component->SelText.c_str();
+
+  CustomBeginUpdate();
   
-  return std::wstring(_component->SelText.c_str());
+  return result;
 }
 
 TextRange CustomEditSpell::FindTextRange()
 {
-  int start = -1, len = -1;
+  int start = 0, len = 0;
   std::wstring buf = ToStdString();
 
   if (buf.size() != 0)
@@ -70,12 +77,6 @@ TextRange CustomEditSpell::FindTextRange()
     while (len < (int)buf.size() && ISALNUM(buf[len])) ++len;
 
     len -= start;
-
-    if (len == 0)
-    {
-      start = -1;
-      len = -1;
-    }
   }
 
   return TextRange(start, len);
@@ -112,16 +113,16 @@ void CustomEditSpell::PerformSpell(TextRange Range)
 {
   _speller.CheckText(ToStdString(Range));
 
+  CustomBeginUpdate();
   if (_speller.Result.size())
   {
-    CustomBeginUpdate();
-
     for (unsigned i = 0; i < _speller.Result.size(); ++i)
       MarkAsMisspell(TextRange(Range.StartPos + _speller.Result[i].pos, _speller.Result[i].len));
 
-    CustomEndUpdate();
     NotifyMisspell();
   }
+
+  CustomEndUpdate();
 }
 
 void CustomEditSpell::NotifyMisspell()

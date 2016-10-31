@@ -10,14 +10,14 @@ void CustomMemoSpell::CustomBeginUpdate()
 {
   _current_sel.StartPos = _component->SelStart;
   //_current_sel.Length   = _component->SelLength;
-  //_component->Lines->BeginUpdate();
+  _component->Lines->BeginUpdate();
 }
 
 void CustomMemoSpell::CustomEndUpdate()
 {
   _component->SelStart  = _current_sel.StartPos;
   //_component->SelLength = _current_sel.Length;
-  //_component->Lines->EndUpdate();
+  _component->Lines->EndUpdate();
 }
 
 std::wstring CustomMemoSpell::ToStdString()
