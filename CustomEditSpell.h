@@ -24,11 +24,10 @@ class CustomEditSpell
   public:
     CustomEditSpell(TForm* Form, TCustomEdit* Component);
     ~CustomEditSpell();
-    
-    // Попробовать сделать виртуальной (для RichEdit)
-    TextRange FindTextRange();
+
+    TextRange FindTextRange(); // Попробовать сделать виртуальной (для RichEdit)
     virtual std::wstring ToStdString();
-    std::wstring ToStdString(TextRange Range);
+    virtual std::wstring ToStdString(TextRange Range);
     
     virtual bool IsMisspell(int Pos);
     virtual void MarkAsMisspell(TextRange Range);

@@ -1,62 +1,67 @@
 #include "RichEditSpell.h"
 
+#define ONCHANGE_BLOCK 1
+#define ONCHANGE_ALLOW 0
+
 RichEditSpell::RichEditSpell(TForm* Form, TRichEdit* Component) : CustomMemoSpell(Form, Component)
 {
   _mainform = Form;
   _component = Component;
 
-  _component->Perform(EM_GETOLEINTERFACE, 0, (int)&_ole);
-  _ole->QueryInterface(__uuidof(ITextDocument), (void**)&_text);
-  _ole->QueryInterface(__uuidof(ITextFont),     (void**)&_style);
+  _component->Perform(EM_GETOLEINTERFACE, 0, (int)&_ole.intf);
+  _ole.intf->QueryInterface(__uuidof(ITextDocument), (void**)&_ole.text);
+}
+
+int RichEditSpell::GetLength()
+{
+  GETTEXTLENGTHEX params;
+  params.flags = GT_DEFAULT;
+  params.codepage = 1200; // Unicode
+
+  return _component->Perform(EM_GETTEXTLENGTHEX, (int)&params, 0);
+}
+
+std::wstring RichEditSpell::ToStdString()
+{
+  wchar_t* buf;
+
+  _ole.text->Range(0, GetLength(), &_ole.range);
+  _ole.range->GetText(&buf);
+
+  return std::wstring(buf);
+}
+
+void RichEditSpell::SetStyle(TextRange& Range, long Color)
+{
+  _ole.text->Range(Range.StartPos, Range.EndPos(), &_ole.range);
+  _ole.range->GetFont(&_ole.style);
+  _ole.style->SetForeColor(Color);
+  _component->Tag = ONCHANGE_BLOCK;
+  _ole.range->SetFont(_ole.style);
+  _component->Tag = ONCHANGE_ALLOW;
 }
     
 bool RichEditSpell::IsMisspell(int Pos)
 {
-  bool result;
+  long color;
 
-  CustomBeginUpdate();
+  _ole.text->Range(Pos, Pos + 1, &_ole.range);
+  _ole.range->GetFont(&_ole.style);
+  _ole.style->GetForeColor(&color);
 
-  _component->SelStart += 1;
-  result = (_component->SelAttributes->Color == clRed);
-
-  CustomEndUpdate();
-
-  return result;
+  return (color == clRed);
 }
 
 void RichEditSpell::MarkAsMisspell(TextRange Range)
 {
-  _component->SelStart  = Range.StartPos;
-  _component->SelLength = Range.Length;
-  _component->Tag = 1;
-  _component->SelAttributes->Color = clRed;
-  _component->Tag = 0;
+  SetStyle(Range, clRed);
 }
 
 void RichEditSpell::UnmarkAsMisspell(TextRange Range)
 {
-  CustomBeginUpdate();
-
-  _component->SelStart  = Range.StartPos;
-  _component->SelLength = Range.Length;
-  _component->Tag = 1;
-  _component->SelAttributes->Color = clBlack;
-  _component->Tag = 0;
-
-  CustomEndUpdate();
-}
-
-void RichEditSpell::CustomEndUpdate()
-{
-  _component->SelStart = _current_sel.StartPos;
-  //_component->SelLength = _current_sel.Length;
-  _component->Tag = 1;
-  _component->SelAttributes->Color = clBlack;
-  _component->Tag = 0;
-  _component->Lines->EndUpdate();
+  SetStyle(Range, tomAutoColor);
 }
 
 void RichEditSpell::NotifyMisspell()
 {
-  return;
 }

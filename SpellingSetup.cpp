@@ -4,6 +4,8 @@
 #include "CustomMemoSpell.h"
 #include "RichEditSpell.h"
 
+#define ONCHANGE_BLOCK 1
+
 //#define ISMODIF(x) (isprint((x), std::locale("Russian_Russia.1251")) || (x) == VK_DELETE || (x) == VK_BACK)
 //#define ISALNUM(x) isalnum((x), std::locale("Russian_Russia.1251"))
 #define ISDELIM(x) (isspace((x), std::locale("Russian_Russia.1251")) || ispunct((x), std::locale("Russian_Russia.1251")))
@@ -32,7 +34,6 @@ class SpellingSetup
     }
     
     void Init(TForm* Form, CustomEditType* Component);
-    void UpdateCurrentWord();
 
     void __fastcall OnKeyDownWrapper (TObject* Sender, WORD&    Key, TShiftState Shift);
     void __fastcall OnKeyPressWrapper(TObject* Sender, wchar_t& Key);
@@ -60,7 +61,7 @@ void SpellingSetup<CustomEditType>::Init(TForm* Form, CustomEditType* Component)
 
   memset(&_current_word, 0, sizeof(_current_word));
   _current_word.CursorPos = _component->SelStart;
-  _current_word.Bounds = _speller->FindTextRange();
+  _current_word.Bounds    = _speller->FindTextRange();
   
   /*if (__classid(CustomEditType) == __classid(TRichEdit))
     _speller = new RichEditSpell(_mainform, _component);
@@ -68,24 +69,6 @@ void SpellingSetup<CustomEditType>::Init(TForm* Form, CustomEditType* Component)
     _speller = new CustomMemoSpell(_mainform, _component);
   else
     _speller = new CustomEditSpell(_mainform, _component);
-  */
-}
-
-template<typename CustomEditType>
-void SpellingSetup<CustomEditType>::UpdateCurrentWord()
-{
-  /*int cursorPos = _component->SelStart;
-  
-  if (!(   cursorPos >= _current_word.Bounds.StartPos - 1
-        && cursorPos <= _current_word.Bounds.EndPos() + 1))
-  {
-    _speller->PerformSpell(_current_word.Bounds);
-  }
-    
-  _current_word.Bounds = _speller->FindTextRange();
-  _current_word.CursorPos = cursorPos;
-  _current_word.PressedKey = L'\0';
-  _current_word.Misspelled = _speller->IsMisspell();
   */
 }
 
@@ -115,7 +98,7 @@ void __fastcall SpellingSetup<CustomEditType>::OnChangeWrapper(TObject* Sender)
   int CurrentPos = _component->SelStart;
 	int CurPosDiff = CurrentPos - _current_word.CursorPos;
 
-  if (_component->Tag)
+  if (_component->Tag == ONCHANGE_BLOCK)
     return;
 
 	if (_current_word.RawKey == VK_BACK)

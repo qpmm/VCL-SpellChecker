@@ -12,6 +12,7 @@ class CustomMemoSpell : public CustomEditSpell
     virtual void CustomEndUpdate();
 
     virtual std::wstring ToStdString();
+    virtual std::wstring ToStdString(TextRange Range);
     
   private:
     TCustomMemo* _component;
