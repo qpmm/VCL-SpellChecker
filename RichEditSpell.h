@@ -20,6 +20,7 @@ class RichEditSpell : public CustomMemoSpell
 
     int GetLength();
     std::wstring ToStdString();
+    std::wstring ToStdString(TextRange Range);
     void SetStyle(TextRange& Range, long Color);
     
     bool IsMisspell(int Pos);

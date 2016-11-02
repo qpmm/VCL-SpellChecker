@@ -49,13 +49,13 @@ void YandexSpeller::ParseJSON(TJSONArray* Content)
   {
     TJSONObject* item = (TJSONObject*)(Content->Get(i));
 
-    Result[i].code = ((TJSONNumber*)(item->Get("code")->JsonValue))->AsInt;
-    Result[i].pos  = ((TJSONNumber*)(item->Get("pos") ->JsonValue))->AsInt;
-    Result[i].row  = ((TJSONNumber*)(item->Get("row") ->JsonValue))->AsInt;
-    Result[i].col  = ((TJSONNumber*)(item->Get("col") ->JsonValue))->AsInt;
-    Result[i].len  = ((TJSONNumber*)(item->Get("len") ->JsonValue))->AsInt;
-    Result[i].word = ((TJSONString*)(item->Get("word")->JsonValue))->ToString().c_str();
-    Result[i].s    = ((TJSONArray* )(item->Get("s")   ->JsonValue))->ToString().c_str();
+    Result[i].code = ((TJSONNumber*)(item->Get(0)->JsonValue))->AsInt;              // code
+    Result[i].pos  = ((TJSONNumber*)(item->Get(1)->JsonValue))->AsInt;              // pos
+    Result[i].row  = ((TJSONNumber*)(item->Get(2)->JsonValue))->AsInt;              // row
+    Result[i].col  = ((TJSONNumber*)(item->Get(3)->JsonValue))->AsInt;              // col
+    Result[i].len  = ((TJSONNumber*)(item->Get(4)->JsonValue))->AsInt;              // len
+    Result[i].word = ((TJSONString*)(item->Get(5)->JsonValue))->ToString().c_str(); // word
+    Result[i].s    = ((TJSONArray* )(item->Get(6)->JsonValue))->ToString().c_str(); // s
     
     /*TJSONArray* suggestions = (TJSONArray*)(item->Get("s")->JsonValue);
 

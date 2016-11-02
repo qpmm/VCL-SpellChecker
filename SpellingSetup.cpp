@@ -6,7 +6,7 @@
 
 #define ONCHANGE_BLOCK 1
 
-//#define ISMODIF(x) (isprint((x), std::locale("Russian_Russia.1251")) || (x) == VK_DELETE || (x) == VK_BACK)
+#define ISMODIF(x) (isprint((x), std::locale("Russian_Russia.1251")) || (x) == VK_DELETE || (x) == VK_BACK)
 //#define ISALNUM(x) isalnum((x), std::locale("Russian_Russia.1251"))
 #define ISDELIM(x) (isspace((x), std::locale("Russian_Russia.1251")) || ispunct((x), std::locale("Russian_Russia.1251")))
 
@@ -17,6 +17,15 @@ struct WordUnderCursor
   WORD       RawKey;
   wchar_t    PressedKey;
   bool       Misspelled;
+};
+
+struct ExistingEventHandlers
+{
+  TKeyEvent      KeyDown;
+  TKeyEvent      KeyUp;
+  TKeyPressEvent KeyPress;
+  TNotifyEvent   Change;
+  TNotifyEvent   Click;
 };
 
 template<typename CustomEditType>
@@ -36,15 +45,17 @@ class SpellingSetup
     void Init(TForm* Form, CustomEditType* Component);
 
     void __fastcall OnKeyDownWrapper (TObject* Sender, WORD&    Key, TShiftState Shift);
+    void __fastcall OnKeyUpWrapper   (TObject* Sender, WORD&    Key, TShiftState Shift);
     void __fastcall OnKeyPressWrapper(TObject* Sender, wchar_t& Key);
     void __fastcall OnChangeWrapper  (TObject* Sender);
     void __fastcall OnClickWrapper   (TObject* Sender);
     
   private:
-    TForm*           _mainform;
-    CustomEditType*  _component;
-    CustomEditSpell* _speller;
-    WordUnderCursor  _current_word;
+    TForm*                _mainform;
+    CustomEditType*       _component;
+    CustomEditSpell*      _speller;
+    WordUnderCursor       _cw;
+    ExistingEventHandlers _eeh;
 };
 
 template<typename CustomEditType>
@@ -52,16 +63,22 @@ void SpellingSetup<CustomEditType>::Init(TForm* Form, CustomEditType* Component)
 {
   _mainform = Form;
   _component = Component;
+
+  _eeh.KeyDown  = _component->OnKeyDown;
+  _eeh.KeyUp    = _component->OnKeyUp;
+  _eeh.KeyPress = _component->OnKeyPress;
+  _eeh.Change   = _component->OnChange;
+  _eeh.Click    = _component->OnClick;
+
   _component->OnKeyDown  = OnKeyDownWrapper;
+  _component->OnKeyUp    = OnKeyUpWrapper;
   _component->OnKeyPress = OnKeyPressWrapper;
   _component->OnChange   = OnChangeWrapper;
   _component->OnClick    = OnClickWrapper;
 
   _speller = new RichEditSpell(_mainform, _component);
 
-  memset(&_current_word, 0, sizeof(_current_word));
-  _current_word.CursorPos = _component->SelStart;
-  _current_word.Bounds    = _speller->FindTextRange();
+  _cw.Bounds = _speller->FindTextRange();
   
   /*if (__classid(CustomEditType) == __classid(TRichEdit))
     _speller = new RichEditSpell(_mainform, _component);
@@ -75,93 +92,96 @@ void SpellingSetup<CustomEditType>::Init(TForm* Form, CustomEditType* Component)
 template<typename CustomEditType>
 void __fastcall SpellingSetup<CustomEditType>::OnKeyDownWrapper(TObject* Sender, WORD& Key, TShiftState Shift)
 {
-  _current_word.CursorPos = _component->SelStart;
-  _current_word.PressedKey = '\0';
-	_current_word.RawKey = Key;
+  if (_eeh.KeyDown)
+    _eeh.KeyDown(Sender, Key, Shift);
 
-	if (_current_word.Misspelled)
-	{
-		_speller->UnmarkAsMisspell(_current_word.Bounds);
-		_current_word.Misspelled = false;
-	}
+  if (_component->SelLength)
+    _cw.Bounds = _speller->FindTextRange();
+
+  _component->SelAttributes->Color = (TColor)tomAutoColor;
+
+  _cw.CursorPos = _component->SelStart;
+	_cw.PressedKey = '\0';
+	_cw.RawKey = Key;
+	_cw.Misspelled = _speller->IsMisspell(_cw.Bounds.StartPos);
 }
+
+template<typename CustomEditType>
+void __fastcall SpellingSetup<CustomEditType>::OnKeyUpWrapper(TObject* Sender, WORD& Key, TShiftState Shift)
+{
+  if (_eeh.KeyUp)
+    _eeh.KeyUp(Sender, Key, Shift);
+
+  // Если просто изменилось положение курсора
+	if (   _cw.RawKey  == VK_END
+      || _cw.RawKey  == VK_HOME
+      || _cw.RawKey  == VK_LEFT
+      || _cw.RawKey  == VK_RIGHT
+      || (_cw.RawKey == VK_UP   && !Shift.Contains(ssCtrl))
+      || (_cw.RawKey == VK_DOWN && !Shift.Contains(ssCtrl)))
+  {
+    OnClickWrapper(NULL);
+  }
+}
+
 
 template<typename CustomEditType>
 void __fastcall SpellingSetup<CustomEditType>::OnKeyPressWrapper(TObject* Sender, wchar_t& Key)
 {
-  _current_word.PressedKey = Key;
+  if (_eeh.KeyPress)
+    _eeh.KeyPress(Sender, Key);
+
+  _cw.PressedKey = Key;
 }
 
 template<typename CustomEditType>
 void __fastcall SpellingSetup<CustomEditType>::OnChangeWrapper(TObject* Sender)
 {
-  int CurrentPos = _component->SelStart;
-	int CurPosDiff = CurrentPos - _current_word.CursorPos;
+  if (_eeh.Change)
+    _eeh.Change(Sender);
 
+  // Если изменились только параметры шрифта
   if (_component->Tag == ONCHANGE_BLOCK)
-    return;
+		return;
 
-	if (_current_word.RawKey == VK_BACK)
+  int CursorPos = _component->SelStart;
+	int PosDiff = CursorPos - _cw.CursorPos;
+
+	TextRange newWord = _speller->FindTextRange();
+
+  if (_cw.Misspelled)
+    _speller->UnmarkAsMisspell(_cw.Bounds);
+
+  _speller->UnmarkAsMisspell(newWord);
+
+	if (ISDELIM(_cw.PressedKey) || PosDiff > 1)
 	{
-		if (   _current_word.Bounds.StartPos == _current_word.CursorPos
-			  || _current_word.Bounds.Length == 0)
-		{
-			_current_word.Bounds = _speller->FindTextRange();
-      _current_word.Misspelled = _speller->IsMisspell(_current_word.Bounds.StartPos);
-		}
-		else
-		{
-			_current_word.Bounds.Length -= 1;
-			//return;
-		}
-	}
-	else if (_current_word.RawKey == VK_DELETE)
-	{
-		if (   _current_word.Bounds.EndPos() == _current_word.CursorPos
-			  || _current_word.Bounds.Length == 0)
-		{
-			_current_word.Bounds = _speller->FindTextRange();
-      _current_word.Misspelled = _speller->IsMisspell(_current_word.Bounds.StartPos);
-		}
-		else
-		{
-			_current_word.Bounds.Length -= 1;
-			//return;
-		}
+    _cw.Bounds.Length += PosDiff;
+    _speller->PerformSpell(_cw.Bounds);
 	}
 
-	if (_current_word.Misspelled || ISDELIM(_current_word.PressedKey) || CurPosDiff > 1)
-	{
-		_current_word.Bounds.Length += CurPosDiff; // ctrl-x ???
-		_speller->PerformSpell(_current_word.Bounds);
-		_current_word.Bounds = _speller->FindTextRange();
-		_current_word.Misspelled = _speller->IsMisspell(_current_word.Bounds.StartPos);
-	}
-	else
-	{
-    _current_word.CursorPos = CurrentPos;
-		if (_current_word.RawKey != VK_BACK && _current_word.RawKey != VK_DELETE)
-		{
-			_current_word.Bounds.Length += CurPosDiff;
-		}
-	}
+	_cw.Misspelled = _speller->IsMisspell(newWord.StartPos);
+	_cw.Bounds = newWord;
 }
 
 template<typename CustomEditType>
 void __fastcall SpellingSetup<CustomEditType>::OnClickWrapper(TObject* Sender)
 {
-  int cursorPos = _component->SelStart;
+  if (_eeh.Click)
+    _eeh.Click(Sender);
 
-	if (   !_current_word.Misspelled
-      && _current_word.Bounds.Length
-      && !(cursorPos >= _current_word.Bounds.StartPos && cursorPos <= _current_word.Bounds.EndPos()))
+  int CursorPos = _component->SelStart;
+
+	if (   !_cw.Misspelled
+      && _cw.Bounds.Length
+      && !(CursorPos >= _cw.Bounds.StartPos && CursorPos <= _cw.Bounds.EndPos()))
 	{
-		_speller->PerformSpell(_current_word.Bounds);
+		_speller->PerformSpell(_cw.Bounds);
   }
 
-  _current_word.Bounds = _speller->FindTextRange();
-  _current_word.CursorPos = cursorPos;
-  _current_word.RawKey = 0;
-  _current_word.PressedKey = L'\0';
-  _current_word.Misspelled = _speller->IsMisspell(_current_word.Bounds.StartPos);
+  _cw.Bounds = _speller->FindTextRange();
+  _cw.CursorPos = CursorPos;
+  _cw.RawKey = 0;
+  _cw.PressedKey = L'\0';
+  _cw.Misspelled = _speller->IsMisspell(_cw.Bounds.StartPos);
 }

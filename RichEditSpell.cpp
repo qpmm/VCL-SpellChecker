@@ -24,19 +24,38 @@ int RichEditSpell::GetLength()
 std::wstring RichEditSpell::ToStdString()
 {
   wchar_t* buf;
+  int Length = GetLength();
 
-  _ole.text->Range(0, GetLength(), &_ole.range);
-  _ole.range->GetText(&buf);
+  if (Length)
+  {
+    _ole.text->Range(0, GetLength(), &_ole.range);
+    _ole.range->GetText(&buf);
+    return std::wstring(buf);
+  }
 
-  return std::wstring(buf);
+  return std::wstring();
+}
+
+std::wstring RichEditSpell::ToStdString(TextRange Range)
+{
+	wchar_t* buf;
+
+  if (Range.Length)
+  {
+    _ole.text->Range(Range.StartPos, Range.EndPos(), &_ole.range);
+    _ole.range->GetText(&buf);
+    return std::wstring(buf);
+  }
+
+	return std::wstring();
 }
 
 void RichEditSpell::SetStyle(TextRange& Range, long Color)
 {
+  _component->Tag = ONCHANGE_BLOCK;
   _ole.text->Range(Range.StartPos, Range.EndPos(), &_ole.range);
   _ole.range->GetFont(&_ole.style);
   _ole.style->SetForeColor(Color);
-  _component->Tag = ONCHANGE_BLOCK;
   _ole.range->SetFont(_ole.style);
   _component->Tag = ONCHANGE_ALLOW;
 }

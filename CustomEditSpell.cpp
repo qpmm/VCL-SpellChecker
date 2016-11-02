@@ -111,6 +111,9 @@ void CustomEditSpell::CustomEndUpdate()
 
 void CustomEditSpell::PerformSpell(TextRange Range)
 {
+  if (Range.Length == 0)
+    return;
+
   _speller.CheckText(ToStdString(Range));
 
   CustomBeginUpdate();
