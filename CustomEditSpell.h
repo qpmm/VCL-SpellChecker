@@ -37,6 +37,8 @@ class CustomEditSpell
     virtual void PerformSpell(TextRange Range);
     virtual void NotifyMisspell();
 
+    int performCount;
+
   protected:
     TForm*               _mainform;
     YandexSpeller        _speller;

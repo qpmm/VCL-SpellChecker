@@ -5,9 +5,9 @@
 #include "RichEditSpell.h"
 
 #define ONCHANGE_BLOCK 1
+#define ONCHANGE_ALLOW 0
 
-#define ISMODIF(x) (isprint((x), std::locale("Russian_Russia.1251")) || (x) == VK_DELETE || (x) == VK_BACK)
-//#define ISALNUM(x) isalnum((x), std::locale("Russian_Russia.1251"))
+//#define ISMODIF(x) (isprint((x), std::locale("Russian_Russia.1251")) || (x) == VK_DELETE || (x) == VK_BACK)
 #define ISDELIM(x) (isspace((x), std::locale("Russian_Russia.1251")) || ispunct((x), std::locale("Russian_Russia.1251")))
 
 struct WordUnderCursor
@@ -26,6 +26,7 @@ struct ExistingEventHandlers
   TKeyPressEvent KeyPress;
   TNotifyEvent   Change;
   TNotifyEvent   Click;
+  TNotifyEvent   Exit;
 };
 
 template<typename CustomEditType>
@@ -36,19 +37,20 @@ class SpellingSetup
     {
       _speller = NULL;
       _component = NULL;
+      memset(&_cw, 0, sizeof(_cw));
+      memset(&_eeh, 0, sizeof(_eeh));
     }
-    ~SpellingSetup()
-    {
-      delete _speller;
-    }
+    ~SpellingSetup() { Cleanup(); }
     
     void Init(TForm* Form, CustomEditType* Component);
+    void Cleanup();
 
     void __fastcall OnKeyDownWrapper (TObject* Sender, WORD&    Key, TShiftState Shift);
     void __fastcall OnKeyUpWrapper   (TObject* Sender, WORD&    Key, TShiftState Shift);
     void __fastcall OnKeyPressWrapper(TObject* Sender, wchar_t& Key);
     void __fastcall OnChangeWrapper  (TObject* Sender);
     void __fastcall OnClickWrapper   (TObject* Sender);
+    void __fastcall OnExitWrapper    (TObject* Sender);
     
   private:
     TForm*                _mainform;
@@ -69,12 +71,14 @@ void SpellingSetup<CustomEditType>::Init(TForm* Form, CustomEditType* Component)
   _eeh.KeyPress = _component->OnKeyPress;
   _eeh.Change   = _component->OnChange;
   _eeh.Click    = _component->OnClick;
+  _eeh.Exit     = _component->OnExit;
 
   _component->OnKeyDown  = OnKeyDownWrapper;
   _component->OnKeyUp    = OnKeyUpWrapper;
   _component->OnKeyPress = OnKeyPressWrapper;
   _component->OnChange   = OnChangeWrapper;
   _component->OnClick    = OnClickWrapper;
+  _component->OnExit     = OnExitWrapper;
 
   _speller = new RichEditSpell(_mainform, _component);
 
@@ -90,6 +94,24 @@ void SpellingSetup<CustomEditType>::Init(TForm* Form, CustomEditType* Component)
 }
 
 template<typename CustomEditType>
+void SpellingSetup<CustomEditType>::Cleanup()
+{
+  delete _speller;
+  _speller = NULL;
+
+  _component->OnKeyDown  = NULL;
+  _component->OnKeyUp    = NULL;
+  _component->OnKeyPress = NULL;
+  _component->OnChange   = NULL;
+  _component->OnClick    = NULL;
+  _component->OnExit     = NULL;
+  _component = NULL;
+
+  memset(&_cw, 0, sizeof(_cw));
+  memset(&_eeh, 0, sizeof(_eeh));
+}
+
+template<typename CustomEditType>
 void __fastcall SpellingSetup<CustomEditType>::OnKeyDownWrapper(TObject* Sender, WORD& Key, TShiftState Shift)
 {
   if (_eeh.KeyDown)
@@ -98,7 +120,9 @@ void __fastcall SpellingSetup<CustomEditType>::OnKeyDownWrapper(TObject* Sender,
   if (_component->SelLength)
     _cw.Bounds = _speller->FindTextRange();
 
+  _component->Tag = ONCHANGE_BLOCK;
   _component->SelAttributes->Color = (TColor)tomAutoColor;
+  _component->Tag = ONCHANGE_ALLOW;
 
   _cw.CursorPos = _component->SelStart;
 	_cw.PressedKey = '\0';
@@ -154,7 +178,7 @@ void __fastcall SpellingSetup<CustomEditType>::OnChangeWrapper(TObject* Sender)
 
   _speller->UnmarkAsMisspell(newWord);
 
-	if (ISDELIM(_cw.PressedKey) || PosDiff > 1)
+	if (ISDELIM(_cw.PressedKey) || _cw.RawKey == VK_RETURN || PosDiff > 1)
 	{
     _cw.Bounds.Length += PosDiff;
     _speller->PerformSpell(_cw.Bounds);
@@ -184,4 +208,13 @@ void __fastcall SpellingSetup<CustomEditType>::OnClickWrapper(TObject* Sender)
   _cw.RawKey = 0;
   _cw.PressedKey = L'\0';
   _cw.Misspelled = _speller->IsMisspell(_cw.Bounds.StartPos);
+}
+
+template<typename CustomEditType>
+void __fastcall SpellingSetup<CustomEditType>::OnExitWrapper(TObject* Sender)
+{
+  if (_eeh.Exit)
+    _eeh.Exit(Sender);
+
+  _speller->PerformSpell(_cw.Bounds);
 }

@@ -35,10 +35,12 @@ CustomEditSpell::CustomEditSpell(TForm* Form, TCustomEdit* Component)
   _component = Component;
   _misspell_pool = new std::map<int, int>;
   _misspell_hint = new TBalloonHint(Component);
+  performCount = 0;
 }
 
 CustomEditSpell::~CustomEditSpell()
 {
+  //MessageBoxW(NULL, IntToStr(performCount).c_str(), L"performCount", MB_OK);
   delete _misspell_pool;
   delete _misspell_hint;
 }
@@ -100,13 +102,13 @@ void CustomEditSpell::UnmarkAsMisspell(TextRange Range)
 void CustomEditSpell::CustomBeginUpdate()
 {
   _current_sel.StartPos = _component->SelStart;
-  //_current_sel.Length   = _component->SelLength;
+  _current_sel.Length   = _component->SelLength;
 }
 
 void CustomEditSpell::CustomEndUpdate()
 {
   _component->SelStart  = _current_sel.StartPos;
-  //_component->SelLength = _current_sel.Length;
+  _component->SelLength = _current_sel.Length;
 }
 
 void CustomEditSpell::PerformSpell(TextRange Range)
@@ -114,6 +116,7 @@ void CustomEditSpell::PerformSpell(TextRange Range)
   if (Range.Length == 0)
     return;
 
+  ++performCount;
   _speller.CheckText(ToStdString(Range));
 
   CustomBeginUpdate();

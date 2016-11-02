@@ -8,6 +8,8 @@ RichEditSpell::RichEditSpell(TForm* Form, TRichEdit* Component) : CustomMemoSpel
   _mainform = Form;
   _component = Component;
 
+  memset(&_ole, 0, sizeof(_ole));
+
   _component->Perform(EM_GETOLEINTERFACE, 0, (int)&_ole.intf);
   _ole.intf->QueryInterface(__uuidof(ITextDocument), (void**)&_ole.text);
 }
