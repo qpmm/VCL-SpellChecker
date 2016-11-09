@@ -14,15 +14,6 @@ RichEditSpell::RichEditSpell(TForm* Form, TRichEdit* Component) : CustomMemoSpel
   _ole.intf->QueryInterface(__uuidof(ITextDocument), (void**)&_ole.text);
 }
 
-int RichEditSpell::GetLength()
-{
-  GETTEXTLENGTHEX params;
-  params.flags = GT_DEFAULT;
-  params.codepage = 1200; // Unicode
-
-  return _component->Perform(EM_GETTEXTLENGTHEX, (int)&params, 0);
-}
-
 std::wstring RichEditSpell::ToStdString()
 {
   wchar_t* buf;
@@ -62,7 +53,7 @@ void RichEditSpell::SetStyle(TextRange& Range, long Color)
   _component->Tag = ONCHANGE_ALLOW;
 }
     
-bool RichEditSpell::IsMisspell(int Pos)
+bool RichEditSpell::IsCorrect(int Pos)
 {
   long color;
 
@@ -70,7 +61,7 @@ bool RichEditSpell::IsMisspell(int Pos)
   _ole.range->GetFont(&_ole.style);
   _ole.style->GetForeColor(&color);
 
-  return (color == clRed);
+  return (color != clRed);
 }
 
 void RichEditSpell::MarkAsMisspell(TextRange Range)

@@ -6,8 +6,8 @@
 
 TextRange::TextRange()
 {
-  StartPos = -1;
-  Length   = -1;
+  StartPos = 0;
+  Length   = 0;
 }
 
 TextRange::TextRange(int Pos, int Len)
@@ -18,13 +18,7 @@ TextRange::TextRange(int Pos, int Len)
 
 int TextRange::EndPos()
 {
-  return StartPos + Length;
-}
-
-bool TextRange::operator==(TextRange rvl)
-{
-  return (   StartPos == rvl.StartPos
-          && Length   == rvl.Length);
+  return (StartPos + Length);
 }
 
 /* class CustomEditSpell */
@@ -33,27 +27,40 @@ CustomEditSpell::CustomEditSpell(TForm* Form, TCustomEdit* Component)
 {
   _mainform = Form;
   _component = Component;
+
   _misspell_pool = new std::map<int, int>;
   _misspell_hint = new TBalloonHint(Component);
-  performCount = 0;
 }
 
 CustomEditSpell::~CustomEditSpell()
 {
-  //MessageBoxW(NULL, IntToStr(performCount).c_str(), L"performCount", MB_OK);
   delete _misspell_pool;
   delete _misspell_hint;
 }
 
-// Может отдельная функция не нужна?
-std::wstring CustomEditSpell::ToStdString()
+/*int CustomEditSpell::GetLength()
 {
-  return std::wstring(_component->Text.c_str());
+  GETTEXTLENGTHEX params;
+  params.flags = GT_DEFAULT;
+  params.codepage = 1200; // Unicode
+
+  return _component->Perform(EM_GETTEXTLENGTHEX, (int)&params, 0);
+}*/
+
+bool CustomEditSpell::CheckRange(TextRange& Range)
+{
+  return (Range.StartPos > 0 && Range.EndPos() <= _component->GetTextLen());
 }
 
 std::wstring CustomEditSpell::ToStdString(TextRange Range)
 {
   std::wstring result;
+
+  if (Range.StartPos == 0 && Range.Length == -1)
+  {
+    result = _component->Text.c_str();
+    return;
+  }
 
   CustomBeginUpdate();
 
@@ -66,27 +73,21 @@ std::wstring CustomEditSpell::ToStdString(TextRange Range)
   return result;
 }
 
-TextRange CustomEditSpell::FindTextRange()
+void CustomEditSpell::FindTextRange(TextRange& Range)
 {
-  int start = 0, len = 0;
   std::wstring buf = ToStdString();
 
-  if (buf.size() != 0)
-  {
-    start = len = _component->SelStart;
+  Range.StartPos = Range.Length = _component->SelStart;
 
-    while (start - 1 >= 0 && ISALNUM(buf[start - 1])) --start;
-    while (len < (int)buf.size() && ISALNUM(buf[len])) ++len;
+  while (ISALNUM(buf[Range.StartPos - 1]) && Range.StartPos - 1 >= 0) --Range.StartPos;
+  while (ISALNUM(buf[Range.Length]) && Range.Length < (int)buf.size()) ++Range.Length;
 
-    len -= start;
-  }
-
-  return TextRange(start, len);
+  Range.Length -= Range.StartPos;
 }
 
-bool CustomEditSpell::IsMisspell(int Pos)
+bool CustomEditSpell::IsCorrect(int Pos)
 {
-  return (_misspell_pool->find(Pos) != _misspell_pool->end());
+  return (_misspell_pool->find(Pos) == _misspell_pool->end());
 }
 
 void CustomEditSpell::MarkAsMisspell(TextRange Range)
@@ -116,7 +117,6 @@ void CustomEditSpell::PerformSpell(TextRange Range)
   if (Range.Length == 0)
     return;
 
-  ++performCount;
   _speller.CheckText(ToStdString(Range));
 
   CustomBeginUpdate();

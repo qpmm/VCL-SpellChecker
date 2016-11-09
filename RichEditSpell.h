@@ -18,12 +18,11 @@ class RichEditSpell : public CustomMemoSpell
   public:
     RichEditSpell(TForm* Form, TRichEdit* Component);
 
-    int GetLength();
     std::wstring ToStdString();
     std::wstring ToStdString(TextRange Range);
     void SetStyle(TextRange& Range, long Color);
     
-    bool IsMisspell(int Pos);
+    bool IsCorrect(int Pos);
     void MarkAsMisspell(TextRange Range);
     void UnmarkAsMisspell(TextRange Range);
     void NotifyMisspell();

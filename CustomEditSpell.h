@@ -13,10 +13,9 @@ class TextRange
     TextRange(int Pos, int Len);
 
     int EndPos();
-    bool operator==(TextRange rvl);
 
-  int StartPos;
-  int Length;
+    int StartPos;
+    int Length;
 };
 
 class CustomEditSpell
@@ -25,19 +24,17 @@ class CustomEditSpell
     CustomEditSpell(TForm* Form, TCustomEdit* Component);
     ~CustomEditSpell();
 
-    TextRange FindTextRange(); // Попробовать сделать виртуальной (для RichEdit)
-    virtual std::wstring ToStdString();
-    virtual std::wstring ToStdString(TextRange Range);
+    bool CheckRange(TextRange& Range);
+    void FindTextRange(TextRange& Range);
+    virtual std::wstring ToStdString(TextRange Range = TextRange(0, -1));
     
-    virtual bool IsMisspell(int Pos);
+    virtual bool IsCorrect(int Pos);
     virtual void MarkAsMisspell(TextRange Range);
     virtual void UnmarkAsMisspell(TextRange Range);
     virtual void CustomBeginUpdate();
     virtual void CustomEndUpdate();
     virtual void PerformSpell(TextRange Range);
     virtual void NotifyMisspell();
-
-    int performCount;
 
   protected:
     TForm*               _mainform;
