@@ -1,7 +1,5 @@
 #include <vcl.h>
 #include <locale>
-#include "CustomEditSpell.h"
-#include "CustomMemoSpell.h"
 #include "RichEditSpell.h"
 
 #define ONCHANGE_BLOCK 1
@@ -33,14 +31,13 @@ struct EventHandlers
   TNotifyEvent      OnExit;
 };
 
-template<typename CustomEditType>
 class SpellingSetup
 {
   public:
     SpellingSetup();
     ~SpellingSetup();
 
-    void Init(TForm* Form, CustomEditType* Component);
+    void Init(TForm* Form, TRichEdit* Component);
     void Cleanup();
 
     void __fastcall OnKeyDownWrapper (TObject* Sender, WORD&    Key, TShiftState Shift);
@@ -51,15 +48,14 @@ class SpellingSetup
     void __fastcall OnExitWrapper    (TObject* Sender);
     
   private:
-    CustomEditType*       _component;
-    CustomEditSpell*      _wrapper;
-    EventHandlers         _handlers;
-    OnKeyDownValues       _keydown;
-    CurrentWord           _cw;
+    TRichEdit*       _component;
+    RichEditSpell*   _wrapper;
+    EventHandlers    _handlers;
+    OnKeyDownValues  _keydown;
+    CurrentWord      _cw;
 };
 
-template<typename CustomEditType>
-SpellingSetup<CustomEditType>::SpellingSetup()
+SpellingSetup::SpellingSetup()
 {
   _component = NULL;
   _wrapper = NULL;
@@ -67,14 +63,12 @@ SpellingSetup<CustomEditType>::SpellingSetup()
   memset(&_handlers, 0, sizeof(_handlers));
 }
 
-template<typename CustomEditType>
-SpellingSetup<CustomEditType>::~SpellingSetup()
+SpellingSetup::~SpellingSetup()
 {
   Cleanup();
 }
 
-template<typename CustomEditType>
-void SpellingSetup<CustomEditType>::Init(TForm* Form, CustomEditType* Component)
+void SpellingSetup::Init(TForm* Form, TRichEdit* Component)
 {
   _component = Component;
 
@@ -93,21 +87,11 @@ void SpellingSetup<CustomEditType>::Init(TForm* Form, CustomEditType* Component)
   _component->OnExit     = OnExitWrapper;
 
   _wrapper = new RichEditSpell(Form, _component);
-
   _wrapper->FindTextRange(_cw.Bounds);
-  _wrapper->PerformSpell(TextRange(0, _wrapper->GetLength()));
-  
-  /*if (__classid(CustomEditType) == __classid(TRichEdit))
-    _wrapper = new RichEditSpell(_mainform, _component);
-  else if (_component->InheritsFrom(__classid(TCustomMemo)))
-    _wrapper = new CustomMemoSpell(_mainform, _component);
-  else
-    _wrapper = new CustomEditSpell(_mainform, _component);
-  */
+  _wrapper->PerformSpell(TextRange(0, _component->GetTextLen()));
 }
 
-template<typename CustomEditType>
-void SpellingSetup<CustomEditType>::Cleanup()
+void SpellingSetup::Cleanup()
 {
   if (_wrapper)
   {
@@ -129,8 +113,7 @@ void SpellingSetup<CustomEditType>::Cleanup()
   memset(&_handlers, 0, sizeof(_handlers));
 }
 
-template<typename CustomEditType>
-void __fastcall SpellingSetup<CustomEditType>::OnKeyDownWrapper(TObject* Sender, WORD& Key, TShiftState Shift)
+void __fastcall SpellingSetup::OnKeyDownWrapper(TObject* Sender, WORD& Key, TShiftState Shift)
 {
   if (_handlers.OnKeyDown)
     _handlers.OnKeyDown(Sender, Key, Shift);
@@ -142,14 +125,13 @@ void __fastcall SpellingSetup<CustomEditType>::OnKeyDownWrapper(TObject* Sender,
   _component->SelAttributes->Color = (TColor)tomAutoColor;
   _component->Tag = ONCHANGE_ALLOW;
 
-  _keydown.TextPos = _wrapper->component->SelStart;
+  //_keydown.TextPos = _wrapper->component->SelStart;
 	_keydown.CharKey = '\0';
 	_keydown.RawKey = Key;
 	_cw.IsCorrect = _wrapper->IsCorrect(_cw.Bounds.StartPos);
 }
 
-template<typename CustomEditType>
-void __fastcall SpellingSetup<CustomEditType>::OnKeyUpWrapper(TObject* Sender, WORD& Key, TShiftState Shift)
+void __fastcall SpellingSetup::OnKeyUpWrapper(TObject* Sender, WORD& Key, TShiftState Shift)
 {
   if (_handlers.OnKeyUp)
     _handlers.OnKeyUp(Sender, Key, Shift);
@@ -166,9 +148,7 @@ void __fastcall SpellingSetup<CustomEditType>::OnKeyUpWrapper(TObject* Sender, W
   }
 }
 
-
-template<typename CustomEditType>
-void __fastcall SpellingSetup<CustomEditType>::OnKeyPressWrapper(TObject* Sender, wchar_t& Key)
+void __fastcall SpellingSetup::OnKeyPressWrapper(TObject* Sender, wchar_t& Key)
 {
   if (_handlers.OnKeyPress)
     _handlers.OnKeyPress(Sender, Key);
@@ -176,8 +156,7 @@ void __fastcall SpellingSetup<CustomEditType>::OnKeyPressWrapper(TObject* Sender
   _keydown.CharKey = Key;
 }
 
-template<typename CustomEditType>
-void __fastcall SpellingSetup<CustomEditType>::OnChangeWrapper(TObject* Sender)
+void __fastcall SpellingSetup::OnChangeWrapper(TObject* Sender)
 {
   if (_handlers.OnChange)
     _handlers.OnChange(Sender);
@@ -205,13 +184,12 @@ void __fastcall SpellingSetup<CustomEditType>::OnChangeWrapper(TObject* Sender)
 	_cw.IsCorrect = _wrapper->IsCorrect(newWord.StartPos);
 }
 
-template<typename CustomEditType>
-void __fastcall SpellingSetup<CustomEditType>::OnClickWrapper(TObject* Sender)
+void __fastcall SpellingSetup::OnClickWrapper(TObject* Sender)
 {
   if (_handlers.OnClick)
     _handlers.OnClick(Sender);
 
-  int NewPos = _wrapper->component->SelStart;
+  int NewPos;// = _wrapper->component->SelStart;
 
 	if (   _cw.IsCorrect
       && _cw.Bounds.Length
@@ -227,8 +205,8 @@ void __fastcall SpellingSetup<CustomEditType>::OnClickWrapper(TObject* Sender)
   _cw.IsCorrect = _wrapper->IsCorrect(_cw.Bounds.StartPos);
 }
 
-template<typename CustomEditType>
-void __fastcall SpellingSetup<CustomEditType>::OnExitWrapper(TObject* Sender)
+
+void __fastcall SpellingSetup::OnExitWrapper(TObject* Sender)
 {
   if (_handlers.OnExit)
     _handlers.OnExit(Sender);
