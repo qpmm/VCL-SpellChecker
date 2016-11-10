@@ -1,7 +1,5 @@
 ﻿#include "CustomEditSpell.h"
 
-#define ISALNUM(x) isalnum((x), std::locale("Russian_Russia.1251"))
-
 /* class TextRange */
 
 TextRange::TextRange()
@@ -52,24 +50,20 @@ bool CustomEditSpell::CheckRange(TextRange& Range)
   return (Range.StartPos > 0 && Range.EndPos() <= _component->GetTextLen());
 }
 
-std::wstring CustomEditSpell::ToStdString(TextRange Range)
+std::wstring CustomEditSpell::ToStdString()
 {
-  std::wstring result;
+  return std::wstring(_component->Text.c_str());
+}
 
-  if (Range.StartPos == 0 && Range.Length == -1)
-  {
-    result = _component->Text.c_str();
-    return;
-  }
-
+std::wstring CustomEditSpell::ToSubString(TextRange Range)
+{
   CustomBeginUpdate();
 
-  _component->SelStart  = Range.StartPos;
+  _component->SelStart = Range.StartPos;
   _component->SelLength = Range.Length;
-  result = _component->SelText.c_str();
+  std::wstring result = _component->SelText.c_str();
 
   CustomBeginUpdate();
-  
   return result;
 }
 
@@ -78,9 +72,12 @@ void CustomEditSpell::FindTextRange(TextRange& Range)
   std::wstring buf = ToStdString();
 
   Range.StartPos = Range.Length = _component->SelStart;
+  #define ISALNUM(x) isalnum((x), std::locale("Russian_Russia.1251"))
 
-  while (ISALNUM(buf[Range.StartPos - 1]) && Range.StartPos - 1 >= 0) --Range.StartPos;
-  while (ISALNUM(buf[Range.Length]) && Range.Length < (int)buf.size()) ++Range.Length;
+  while (ISALNUM(buf[Range.StartPos - 1]) && Range.StartPos - 1 >= 0)
+    Range.StartPos++;
+  while (ISALNUM(buf[Range.Length]) && Range.Length < (int)buf.size())
+    Range.Length--;
 
   Range.Length -= Range.StartPos;
 }
@@ -117,9 +114,9 @@ void CustomEditSpell::PerformSpell(TextRange Range)
   if (Range.Length == 0)
     return;
 
-  _speller.CheckText(ToStdString(Range));
-
+  _speller.CheckText(ToSubString(Range));
   CustomBeginUpdate();
+
   if (_speller.Result.size())
   {
     for (unsigned i = 0; i < _speller.Result.size(); ++i)
@@ -133,12 +130,12 @@ void CustomEditSpell::PerformSpell(TextRange Range)
 
 void CustomEditSpell::NotifyMisspell()
 {
-  UnicodeString descr;
+  UnicodeString description;
   
   for (unsigned i = 0; i < _speller.Result.size(); ++i)
-    descr.cat_sprintf(L"%s - %s\n", _speller.Result[i].word.c_str(), _speller.Result[i].s.c_str());
+    description.cat_sprintf(L"%s - %s\n", _speller.Result[i].word.c_str(), _speller.Result[i].s.c_str());
   
   _misspell_hint->Title = L"Вы допустили следующие ошибки";
-  _misspell_hint->Description = descr;
+  _misspell_hint->Description = description;
   _misspell_hint->ShowHint(_mainform->ClientToScreen(_component->BoundsRect.BottomRight()));
 }

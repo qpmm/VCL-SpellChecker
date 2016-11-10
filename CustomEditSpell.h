@@ -26,7 +26,8 @@ class CustomEditSpell
 
     bool CheckRange(TextRange& Range);
     void FindTextRange(TextRange& Range);
-    virtual std::wstring ToStdString(TextRange Range = TextRange(0, -1));
+    virtual std::wstring ToStdString();
+    virtual std::wstring ToSubString(TextRange Range);
     
     virtual bool IsCorrect(int Pos);
     virtual void MarkAsMisspell(TextRange Range);

@@ -17,11 +17,11 @@ RichEditSpell::RichEditSpell(TForm* Form, TRichEdit* Component) : CustomMemoSpel
 std::wstring RichEditSpell::ToStdString()
 {
   wchar_t* buf;
-  int Length = GetLength();
+  int Length = _component->GetTextLen();
 
   if (Length)
   {
-    _ole.text->Range(0, GetLength(), &_ole.range);
+    _ole.text->Range(0, Length, &_ole.range);
     _ole.range->GetText(&buf);
     return std::wstring(buf);
   }
@@ -29,7 +29,7 @@ std::wstring RichEditSpell::ToStdString()
   return std::wstring();
 }
 
-std::wstring RichEditSpell::ToStdString(TextRange Range)
+std::wstring RichEditSpell::ToSubString(TextRange Range)
 {
 	wchar_t* buf;
 

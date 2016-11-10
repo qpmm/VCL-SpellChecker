@@ -19,7 +19,7 @@ class RichEditSpell : public CustomMemoSpell
     RichEditSpell(TForm* Form, TRichEdit* Component);
 
     std::wstring ToStdString();
-    std::wstring ToStdString(TextRange Range);
+    std::wstring ToSubString(TextRange Range);
     void SetStyle(TextRange& Range, long Color);
     
     bool IsCorrect(int Pos);
