@@ -1,18 +1,15 @@
 ﻿#include "RichEditSpell.h"
 
-#define ONCHANGE_BLOCK 1
-#define ONCHANGE_ALLOW 0
-
 TextRange::TextRange()
 {
   StartPos = 0;
-  Length   = 0;
+  Length = 0;
 }
 
 TextRange::TextRange(int Pos, int Len)
 {
   StartPos = Pos;
-  Length   = Len;
+  Length = Len;
 }
 
 int TextRange::EndPos()
@@ -20,7 +17,7 @@ int TextRange::EndPos()
   return (StartPos + Length);
 }
 
-RichEditSpell::RichEditSpell(TForm* Form, TCustomEdit* Component)
+RichEditSpell::RichEditSpell(TForm* Form, TRichEdit* Component)
 {
   _mainform = Form;
   _component = Component;
@@ -41,41 +38,32 @@ bool RichEditSpell::CheckRange(TextRange& Range)
   return (Range.StartPos > 0 && Range.EndPos() <= _component->GetTextLen());
 }
 
-std::wstring RichEditSpell::ToStdString()
+std::wstring RichEditSpell::ToStdStr()
 {
-  int length = _component->GetTextLen();
-  wchar_t* buf;
-
-  if (length)
-  {
-    _ole.text->Range(0, length, &_ole.range);
-    _ole.range->GetText(&buf);
-    return std::wstring(buf);
-  }
-
-  return std::wstring();
+  return SubStr(TextRange(0, _component->GetTextLen()));
 }
 
-std::wstring RichEditSpell::ToSubString(TextRange Range)
+std::wstring RichEditSpell::SubStr(TextRange Range)
 {
-	wchar_t* buf;
+  wchar_t* buf;
+  std::wstring substr;
 
   if (Range.Length)
   {
     _ole.text->Range(Range.StartPos, Range.EndPos(), &_ole.range);
     _ole.range->GetText(&buf);
-    return std::wstring(buf);
+	substr = buf;
   }
 
-	return std::wstring();
+  return substr;
 }
 
 void RichEditSpell::FindTextRange(TextRange& Range)
 {
-  std::wstring buf = ToStdString();
-
-  Range.StartPos = Range.Length = _component->SelStart;
   #define ISALNUM(x) isalnum((x), std::locale("Russian_Russia.1251"))
+
+  std::wstring buf = ToStdStr();
+  Range.StartPos = Range.Length = _component->SelStart;
 
   while (ISALNUM(buf[Range.StartPos - 1]) && Range.StartPos - 1 >= 0)
     Range.StartPos++;
@@ -85,11 +73,11 @@ void RichEditSpell::FindTextRange(TextRange& Range)
   Range.Length -= Range.StartPos;
 }
 
-bool RichEditSpell::IsCorrect(int Pos)
+bool RichEditSpell::IsCorrect()
 {
-  long color;
+  long color, pos = _component->SelStart;
 
-  _ole.text->Range(Pos, Pos + 1, &_ole.range);
+  _ole.text->Range(pos, pos + 1, &_ole.range);
   _ole.range->GetFont(&_ole.style);
   _ole.style->GetForeColor(&color);
 
@@ -98,6 +86,9 @@ bool RichEditSpell::IsCorrect(int Pos)
 
 void RichEditSpell::SetStyle(TextRange& Range, long Color)
 {
+  #define ONCHANGE_BLOCK 1
+  #define ONCHANGE_ALLOW 0
+
   _component->Tag = ONCHANGE_BLOCK;
   _ole.text->Range(Range.StartPos, Range.EndPos(), &_ole.range);
   _ole.range->GetFont(&_ole.style);
@@ -116,45 +107,18 @@ void RichEditSpell::UnmarkAsMisspell(TextRange Range)
   SetStyle(Range, tomAutoColor);
 }
 
-void RichEditSpell::CustomBeginUpdate()
-{
-  _current_sel.StartPos = _component->SelStart;
-  _current_sel.Length   = _component->SelLength;
-}
-
-void RichEditSpell::CustomEndUpdate()
-{
-  _component->SelStart  = _current_sel.StartPos;
-  _component->SelLength = _current_sel.Length;
-}
-
 void RichEditSpell::PerformSpell(TextRange Range)
 {
   if (Range.Length == 0)
     return;
 
-  _speller.CheckText(ToSubString(Range));
-  CustomBeginUpdate();
+  _speller.CheckText(SubStr(Range));
 
-  if (_speller.Result.size())
-  {
-    for (unsigned i = 0; i < _speller.Result.size(); ++i)
-      MarkAsMisspell(TextRange(Range.StartPos + _speller.Result[i].pos, _speller.Result[i].len));
-
-    NotifyMisspell();
-  }
-
-  CustomEndUpdate();
-}
-
-void RichEditSpell::NotifyMisspell()
-{
-  UnicodeString description;
-
+  TextRange word;
   for (unsigned i = 0; i < _speller.Result.size(); ++i)
-    description.cat_sprintf(L"%s - %s\n", _speller.Result[i].word.c_str(), _speller.Result[i].s.c_str());
-
-  _misspell_hint->Title = L"Вы допустили следующие ошибки";
-  _misspell_hint->Description = description;
-  _misspell_hint->ShowHint(_mainform->ClientToScreen(_component->BoundsRect.BottomRight()));
-}
+  {
+	word.StartPos = Range.StartPos + _speller.Result[i].pos;
+	word.Length = _speller.Result[i].len;
+	MarkAsMisspell(word);
+  }
+}

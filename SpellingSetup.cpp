@@ -88,6 +88,7 @@ void SpellingSetup::Init(TForm* Form, TRichEdit* Component)
 
   _wrapper = new RichEditSpell(Form, _component);
   _wrapper->FindTextRange(_cw.Bounds);
+  _cw.IsCorrect = _wrapper->IsCorrect();
   _wrapper->PerformSpell(TextRange(0, _component->GetTextLen()));
 }
 
@@ -125,10 +126,10 @@ void __fastcall SpellingSetup::OnKeyDownWrapper(TObject* Sender, WORD& Key, TShi
   _component->SelAttributes->Color = (TColor)tomAutoColor;
   _component->Tag = ONCHANGE_ALLOW;
 
-  //_keydown.TextPos = _wrapper->component->SelStart;
-	_keydown.CharKey = '\0';
-	_keydown.RawKey = Key;
-	_cw.IsCorrect = _wrapper->IsCorrect(_cw.Bounds.StartPos);
+  _keydown.TextPos = _component->SelStart;
+  _keydown.CharKey = '\0';
+  _keydown.RawKey = Key;
+  _cw.IsCorrect = _wrapper->IsCorrect();
 }
 
 void __fastcall SpellingSetup::OnKeyUpWrapper(TObject* Sender, WORD& Key, TShiftState Shift)
@@ -165,23 +166,23 @@ void __fastcall SpellingSetup::OnChangeWrapper(TObject* Sender)
   if (_component->Tag == ONCHANGE_BLOCK)
 		return;
 
+  int posDiff = _component->SelStart - _keydown.TextPos;
   TextRange newWord;
   _wrapper->FindTextRange(newWord);
-	int posDiff = _component->SelStart - _keydown.TextPos;
 
   if (!_cw.IsCorrect)
-    _wrapper->UnmarkAsMisspell(_cw.Bounds);
+	_wrapper->UnmarkAsMisspell(_cw.Bounds);
 
   _wrapper->UnmarkAsMisspell(newWord);
 
-	if (ISDELIM(_keydown.CharKey) || _keydown.RawKey == VK_RETURN || posDiff > 1)
-	{
+  if (ISDELIM(_keydown.CharKey) || _keydown.RawKey == VK_RETURN || posDiff > 1)
+  {
     _cw.Bounds.Length += posDiff;
-    _wrapper->PerformSpell(_cw.Bounds);
-	}
+	_wrapper->PerformSpell(_cw.Bounds);
+  }
 
   _cw.Bounds = newWord;
-	_cw.IsCorrect = _wrapper->IsCorrect(newWord.StartPos);
+  _cw.IsCorrect = _wrapper->IsCorrect();
 }
 
 void __fastcall SpellingSetup::OnClickWrapper(TObject* Sender)
@@ -189,20 +190,20 @@ void __fastcall SpellingSetup::OnClickWrapper(TObject* Sender)
   if (_handlers.OnClick)
     _handlers.OnClick(Sender);
 
-  int NewPos;// = _wrapper->component->SelStart;
+  int NewPos = _component->SelStart;
 
-	if (   _cw.IsCorrect
-      && _cw.Bounds.Length
+  if (   _cw.IsCorrect
+	  && _cw.Bounds.Length
       && (NewPos < _cw.Bounds.StartPos || NewPos > _cw.Bounds.EndPos()))
-	{
-		_wrapper->PerformSpell(_cw.Bounds);
+  {
+	_wrapper->PerformSpell(_cw.Bounds);
   }
 
   _wrapper->FindTextRange(_cw.Bounds);
   _keydown.TextPos = NewPos;
   _keydown.RawKey = 0;
   _keydown.CharKey = L'\0';
-  _cw.IsCorrect = _wrapper->IsCorrect(_cw.Bounds.StartPos);
+  _cw.IsCorrect = _wrapper->IsCorrect();
 }
 
 

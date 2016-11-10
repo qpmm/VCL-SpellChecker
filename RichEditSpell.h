@@ -35,25 +35,21 @@ class RichEditSpell
     ~RichEditSpell();
 
     bool CheckRange(TextRange& Range);
-    void FindTextRange(TextRange& Range);
-    std::wstring ToStdString();
-    std::wstring ToSubString(TextRange Range);
+	void FindTextRange(TextRange& Range);
+	std::wstring ToStdStr();
+	std::wstring SubStr(TextRange Range);
 
-    void SetStyle(TextRange& Range, long Color);
-    bool IsCorrect(int Pos);
+	bool IsCorrect();
+	void SetStyle(TextRange& Range, long Color);
     void MarkAsMisspell(TextRange Range);
-    void UnmarkAsMisspell(TextRange Range);
-    void CustomBeginUpdate();
-    void CustomEndUpdate();
+	void UnmarkAsMisspell(TextRange Range);
     void PerformSpell(TextRange Range);
 
   private:
     TForm*         _mainform;
     TRichEdit*     _component;
     RichEditOLE    _ole;
-
-    YandexSpeller  _speller;
-    TextRange      _current_sel;
+	YandexSpeller  _speller;
 };
 
 #endif
