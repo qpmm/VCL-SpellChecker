@@ -65,10 +65,12 @@ void RichEditSpell::FindTextRange(TextRange& Range)
   std::wstring buf = ToStdStr();
   Range.StartPos = Range.Length = _component->SelStart;
 
+  volatile bool check = isalnum(L'\r', std::locale("Russian_Russia.1251"));
+
   while (ISALNUM(buf[Range.StartPos - 1]) && Range.StartPos - 1 >= 0)
-    Range.StartPos++;
+    Range.StartPos--;
   while (ISALNUM(buf[Range.Length]) && Range.Length < (int)buf.size())
-    Range.Length--;
+    Range.Length++;
 
   Range.Length -= Range.StartPos;
 }
@@ -121,4 +123,15 @@ void RichEditSpell::PerformSpell(TextRange Range)
 	word.Length = _speller.Result[i].len;
 	MarkAsMisspell(word);
   }
+}
+
+std::vector<std::wstring>* RichEditSpell::GetSuggestions(int Pos)
+{
+  for (unsigned i = 0; i < _speller.Result.size(); ++i)
+  {
+    if (_speller.Result[i].pos == Pos)
+      return &_speller.Result[i].s;
+  }
+
+  return NULL;
 }

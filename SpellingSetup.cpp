@@ -8,17 +8,18 @@
 //#define ISMODIF(x) (isprint((x), std::locale("Russian_Russia.1251")) || (x) == VK_DELETE || (x) == VK_BACK)
 #define ISDELIM(x) (isspace((x), std::locale("Russian_Russia.1251")) || ispunct((x), std::locale("Russian_Russia.1251")))
 
-struct OnKeyDownValues
-{
-  int        TextPos;
-  WORD       RawKey;
-  wchar_t    CharKey;
-};
-
 struct CurrentWord
 {
   TextRange  Bounds;
   bool       IsCorrect;
+};
+
+struct OnKeyDownValues
+{
+  CurrentWord Word;
+  int         TextPos;
+  WORD        RawKey;
+  wchar_t     CharKey;
 };
 
 struct EventHandlers
@@ -27,7 +28,7 @@ struct EventHandlers
   TKeyEvent         OnKeyUp;
   TKeyPressEvent    OnKeyPress;
   TNotifyEvent      OnChange;
-  TNotifyEvent      OnClick;
+  TMouseEvent       OnMouseUp;
   TNotifyEvent      OnExit;
 };
 
@@ -44,21 +45,25 @@ class SpellingSetup
     void __fastcall OnKeyUpWrapper   (TObject* Sender, WORD&    Key, TShiftState Shift);
     void __fastcall OnKeyPressWrapper(TObject* Sender, wchar_t& Key);
     void __fastcall OnChangeWrapper  (TObject* Sender);
-    void __fastcall OnClickWrapper   (TObject* Sender);
+    void __fastcall OnMouseUpWrapper (TObject* Sender, TMouseButton Button, TShiftState Shift, int X, int Y);
     void __fastcall OnExitWrapper    (TObject* Sender);
+    void __fastcall OnMenuItemClick  (TObject* Sender);
+
+    void UpdateCurrentWord();
     
   private:
     TRichEdit*       _component;
+    TPopupMenu*      _menu;
     RichEditSpell*   _wrapper;
     EventHandlers    _handlers;
     OnKeyDownValues  _keydown;
-    CurrentWord      _cw;
 };
 
 SpellingSetup::SpellingSetup()
 {
   _component = NULL;
   _wrapper = NULL;
+  _menu = NULL;
   memset(&_keydown, 0, sizeof(_keydown));
   memset(&_handlers, 0, sizeof(_handlers));
 }
@@ -76,19 +81,21 @@ void SpellingSetup::Init(TForm* Form, TRichEdit* Component)
   _handlers.OnKeyUp    = _component->OnKeyUp;
   _handlers.OnKeyPress = _component->OnKeyPress;
   _handlers.OnChange   = _component->OnChange;
-  _handlers.OnClick    = _component->OnClick;
+  _handlers.OnMouseUp  = _component->OnMouseUp;
   _handlers.OnExit     = _component->OnExit;
 
-  _component->OnKeyDown  = OnKeyDownWrapper;
-  _component->OnKeyUp    = OnKeyUpWrapper;
-  _component->OnKeyPress = OnKeyPressWrapper;
-  _component->OnChange   = OnChangeWrapper;
-  _component->OnClick    = OnClickWrapper;
-  _component->OnExit     = OnExitWrapper;
+  _component->OnKeyDown   = OnKeyDownWrapper;
+  _component->OnKeyUp     = OnKeyUpWrapper;
+  _component->OnKeyPress  = OnKeyPressWrapper;
+  _component->OnChange    = OnChangeWrapper;
+  _component->OnMouseUp   = OnMouseUpWrapper;
+  _component->OnExit      = OnExitWrapper;
 
   _wrapper = new RichEditSpell(Form, _component);
-  _wrapper->FindTextRange(_cw.Bounds);
-  _cw.IsCorrect = _wrapper->IsCorrect();
+  _menu = new TPopupMenu(_component);
+
+  _wrapper->FindTextRange(_keydown.Word.Bounds);
+  _keydown.Word.IsCorrect = _wrapper->IsCorrect();
   _wrapper->PerformSpell(TextRange(0, _component->GetTextLen()));
 }
 
@@ -106,7 +113,7 @@ void SpellingSetup::Cleanup()
     _component->OnKeyUp    = _handlers.OnKeyUp;
     _component->OnKeyPress = _handlers.OnKeyPress;
     _component->OnChange   = _handlers.OnChange;
-    _component->OnClick    = _handlers.OnClick;
+    _component->OnMouseUp  = _handlers.OnMouseUp;
     _component->OnExit     = _handlers.OnExit;
     _component = NULL;
   }
@@ -120,16 +127,14 @@ void __fastcall SpellingSetup::OnKeyDownWrapper(TObject* Sender, WORD& Key, TShi
     _handlers.OnKeyDown(Sender, Key, Shift);
 
   if (_component->SelLength)
-    _wrapper->FindTextRange(_cw.Bounds);
+    _wrapper->FindTextRange(_keydown.Word.Bounds);
 
-  _component->Tag = ONCHANGE_BLOCK;
   _component->SelAttributes->Color = (TColor)tomAutoColor;
-  _component->Tag = ONCHANGE_ALLOW;
 
   _keydown.TextPos = _component->SelStart;
   _keydown.CharKey = '\0';
   _keydown.RawKey = Key;
-  _cw.IsCorrect = _wrapper->IsCorrect();
+  _keydown.Word.IsCorrect = _wrapper->IsCorrect();
 }
 
 void __fastcall SpellingSetup::OnKeyUpWrapper(TObject* Sender, WORD& Key, TShiftState Shift)
@@ -145,7 +150,7 @@ void __fastcall SpellingSetup::OnKeyUpWrapper(TObject* Sender, WORD& Key, TShift
       || (_keydown.RawKey == VK_UP   && !Shift.Contains(ssCtrl))
       || (_keydown.RawKey == VK_DOWN && !Shift.Contains(ssCtrl)))
   {
-    OnClickWrapper(NULL);
+    UpdateCurrentWord();
   }
 }
 
@@ -170,40 +175,46 @@ void __fastcall SpellingSetup::OnChangeWrapper(TObject* Sender)
   TextRange newWord;
   _wrapper->FindTextRange(newWord);
 
-  if (!_cw.IsCorrect)
-	_wrapper->UnmarkAsMisspell(_cw.Bounds);
+  if (!_keydown.Word.IsCorrect)
+	  _wrapper->UnmarkAsMisspell(_keydown.Word.Bounds);
 
   _wrapper->UnmarkAsMisspell(newWord);
 
   if (ISDELIM(_keydown.CharKey) || _keydown.RawKey == VK_RETURN || posDiff > 1)
   {
-    _cw.Bounds.Length += posDiff;
-	_wrapper->PerformSpell(_cw.Bounds);
+    _keydown.Word.Bounds.Length += posDiff;
+	  _wrapper->PerformSpell(_keydown.Word.Bounds);
   }
 
-  _cw.Bounds = newWord;
-  _cw.IsCorrect = _wrapper->IsCorrect();
+  _keydown.Word.Bounds = newWord;
+  _keydown.Word.IsCorrect = _wrapper->IsCorrect();
 }
 
-void __fastcall SpellingSetup::OnClickWrapper(TObject* Sender)
+void __fastcall SpellingSetup::OnMouseUpWrapper(TObject* Sender, TMouseButton Button, TShiftState Shift, int X, int Y)
 {
-  if (_handlers.OnClick)
-    _handlers.OnClick(Sender);
+  if (_handlers.OnMouseUp)
+    _handlers.OnMouseUp(Sender, Button, Shift, X, Y);
 
-  int NewPos = _component->SelStart;
+  if (Button == mbRight)
+    _component->SelStart = _component->Perform(EM_CHARFROMPOS, 0, (int)&TPoint(X, Y));
 
-  if (   _cw.IsCorrect
-	  && _cw.Bounds.Length
-      && (NewPos < _cw.Bounds.StartPos || NewPos > _cw.Bounds.EndPos()))
+  UpdateCurrentWord();
+
+  if (Button == mbRight)
   {
-	_wrapper->PerformSpell(_cw.Bounds);
-  }
+    _menu->Items->Clear();
+    std::vector<std::wstring>* suggs = _wrapper->GetSuggestions(_keydown.Word.Bounds.StartPos);
 
-  _wrapper->FindTextRange(_cw.Bounds);
-  _keydown.TextPos = NewPos;
-  _keydown.RawKey = 0;
-  _keydown.CharKey = L'\0';
-  _cw.IsCorrect = _wrapper->IsCorrect();
+    for (int i = 0; i < suggs->size(); ++i)
+    {
+      TMenuItem* item = new TMenuItem;
+
+      item->Caption = suggs->at(i).c_str();
+      item->Tag = (int)&_keyword.word.Bounds;
+      item->OnClick = ;
+
+      _menu->Items->Add()
+    }
 }
 
 
@@ -212,5 +223,30 @@ void __fastcall SpellingSetup::OnExitWrapper(TObject* Sender)
   if (_handlers.OnExit)
     _handlers.OnExit(Sender);
 
-  _wrapper->PerformSpell(_cw.Bounds);
+  _wrapper->PerformSpell(_keydown.Word.Bounds);
+}
+
+void __fastcall SpellingSetup::OnMenuItemClick(TObject* Sender)
+{
+  TextRange* range = (TextRange*)((TMenuItem*)Sender)->Tag;
+
+  _wrapper->_ole.text->Range(range->StartPos, range->EndPos(), &_wrapper->_ole.range);
+}
+
+void SpellingSetup::UpdateCurrentWord()
+{
+  int NewPos = _component->SelStart;
+
+  if (   _keydown.Word.IsCorrect
+	    && _keydown.Word.Bounds.Length
+      && (NewPos < _keydown.Word.Bounds.StartPos || NewPos > _keydown.Word.Bounds.EndPos()))
+  {
+	  _wrapper->PerformSpell(_keydown.Word.Bounds);
+  }
+
+  _wrapper->FindTextRange(_keydown.Word.Bounds);
+  _keydown.TextPos = NewPos;
+  _keydown.RawKey = 0;
+  _keydown.CharKey = L'\0';
+  _keydown.Word.IsCorrect = _wrapper->IsCorrect();
 }

@@ -14,8 +14,7 @@ struct ResponseObject
   int col;
   int len;
   std::wstring word;
-  std::wstring s;
-  //std::vector<std::wstring> s;
+  std::vector<std::wstring> s;
 };
 
 class YandexSpeller
