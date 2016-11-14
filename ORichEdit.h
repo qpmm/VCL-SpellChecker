@@ -1,57 +1,64 @@
 #ifndef ORichEditH
 #define ORichEditH
 
+#include <vcl.h>
 #include <richole.h>
 #include <tom.h>
 #include <string>
 
-class OTextAttributes
+class TextAttributes
 {
-  
+  public:
+    TextAttributes(ITextRange** range);
+
+    __property int Color = {read = GetColor, write = SetColor};
+    //__property int Style = {read = GetStyle, write = SetStyle};
+
+    int GetColor();
+    void SetColor(int color);
+
+    //int GetStyle();
+    //void SetStyle(int style);
+
+  private:
+    ITextRange**  _range;
+    ITextFont*    _style;
 };
 
 class ORichEdit
 {
   public:
     ORichEdit(TRichEdit* Component);
-    
-    __property int          SelStart = {read = GetSelStart, write = SetSelStart};
-    __property int          SelLength = {read = GetSelLength, write = SetSelLength};
-    __property std::wstring SelText = {read = GetSelText, write = SetSelText};
-    
-    __property int          RangeStart = {read = GetRangeStart, write = SetRangeStart};
-    __property int          RangeLength = {read = GetSelLength, write = SetSelLength};
-    __property std::wstring SelText = {read = GetSelText, write = SetSelText};
-    
-    __property std::wstring Text = {read = GetText, write = SetText};
+    ~ORichEdit();
     
     int GetTextLen();
+
+    __property int SelStart = {read = GetSelStart, write = SetSelStart};
+    __property int SelLength = {read = GetSelLength, write = SetSelLength};
+    __property std::wstring SelText = {read = GetSelText, write = SetSelText};
+    __property std::wstring Text = {read = GetText, write = SetText};
     
     int GetSelStart();
     void SetSelStart(int start);
+
     int GetSelLength();
     void SetSelLength(int length);
+
     std::wstring GetSelText();
     void SetSelText(std::wstring text);
     void SetSelText(wchar_t* text);
+
     std::wstring GetText();
     void SetText(std::wstring text);
     void SetText(wchar_t* text);
-    
-    void GetTextRange(TextRange range);
-    void SetTextRange(TextRange range, std::wstring text);
-    void SetTextRange(TextRange range, wchar_t* text);
-    
-    TextRange GetSelRange();
-    void SetSelRange(TextRange range);
-    
-    
+
+    TextAttributes*  SelAttributes;
+    TRichEdit*       Object;
   
   //private:
     ITextDocument*   _doc;
     ITextSelection*  _sel;
     ITextRange*      _range;
-    ITextFont*       _style;
 };
 
 #endif

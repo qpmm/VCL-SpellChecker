@@ -53,7 +53,6 @@ class SpellingSetup
     
   private:
     TRichEdit*       _component;
-    TPopupMenu*      _menu;
     RichEditSpell*   _wrapper;
     EventHandlers    _handlers;
     OnKeyDownValues  _keydown;
@@ -63,7 +62,6 @@ SpellingSetup::SpellingSetup()
 {
   _component = NULL;
   _wrapper = NULL;
-  _menu = NULL;
   memset(&_keydown, 0, sizeof(_keydown));
   memset(&_handlers, 0, sizeof(_handlers));
 }
@@ -76,6 +74,8 @@ SpellingSetup::~SpellingSetup()
 void SpellingSetup::Init(TForm* Form, TRichEdit* Component)
 {
   _component = Component;
+
+  _component->PopupMenu = new TPopupMenu(_component);
 
   _handlers.OnKeyDown  = _component->OnKeyDown;
   _handlers.OnKeyUp    = _component->OnKeyUp;
@@ -92,7 +92,6 @@ void SpellingSetup::Init(TForm* Form, TRichEdit* Component)
   _component->OnExit      = OnExitWrapper;
 
   _wrapper = new RichEditSpell(Form, _component);
-  _menu = new TPopupMenu(_component);
 
   _wrapper->FindTextRange(_keydown.Word.Bounds);
   _keydown.Word.IsCorrect = _wrapper->IsCorrect();
@@ -182,7 +181,8 @@ void __fastcall SpellingSetup::OnChangeWrapper(TObject* Sender)
 
   if (ISDELIM(_keydown.CharKey) || _keydown.RawKey == VK_RETURN || posDiff > 1)
   {
-    _keydown.Word.Bounds.Length += posDiff;
+    if (posDiff > 1)
+      _keydown.Word.Bounds.Length += posDiff;
 	  _wrapper->PerformSpell(_keydown.Word.Bounds);
   }
 
@@ -202,21 +202,36 @@ void __fastcall SpellingSetup::OnMouseUpWrapper(TObject* Sender, TMouseButton Bu
 
   if (Button == mbRight)
   {
-    _menu->Items->Clear();
+    _component->PopupMenu->Items->Clear();
     std::vector<std::wstring>* suggs = _wrapper->GetSuggestions(_keydown.Word.Bounds.StartPos);
 
-    for (int i = 0; i < suggs->size(); ++i)
+    if (suggs && suggs->size())
     {
-      TMenuItem* item = new TMenuItem;
+      for (unsigned i = 0; i < suggs->size(); ++i)
+      {
+        TMenuItem* item = new TMenuItem(_component->PopupMenu);
 
-      item->Caption = suggs->at(i).c_str();
-      item->Tag = (int)&_keyword.word.Bounds;
-      item->OnClick = ;
+        item->Caption = suggs->at(i).c_str();
+        item->Tag = (int)&_keydown.Word.Bounds;
+        item->OnClick = OnMenuItemClick;
 
-      _menu->Items->Add()
+        _component->PopupMenu->Items->Add(item);
+      }
     }
-}
+    else
+    {
+      TMenuItem* item = new TMenuItem(_component->PopupMenu);
 
+      item->Caption = L"Варианты отсутствуют";
+      item->Enabled = false;
+
+      _component->PopupMenu->Items->Add(item);
+    }
+
+    TPoint kokord = _component->ClientToScreen(TPoint(X, Y));
+    _component->PopupMenu->Popup(kokord.X, kokord.Y);
+  }
+}
 
 void __fastcall SpellingSetup::OnExitWrapper(TObject* Sender)
 {
@@ -228,9 +243,17 @@ void __fastcall SpellingSetup::OnExitWrapper(TObject* Sender)
 
 void __fastcall SpellingSetup::OnMenuItemClick(TObject* Sender)
 {
-  TextRange* range = (TextRange*)((TMenuItem*)Sender)->Tag;
+  TMenuItem* item = (TMenuItem*)Sender;
+  TextRange* range = (TextRange*)(item->Tag);
+  ITextSelection* sel;
 
-  _wrapper->_ole.text->Range(range->StartPos, range->EndPos(), &_wrapper->_ole.range);
+  _component->Tag = ONCHANGE_BLOCK;
+
+  _wrapper->UnmarkAsMisspell(*range);
+  _wrapper->_ole.text->Range(range->StartPos, range->EndPos(), &(_wrapper->_ole.range));
+  _wrapper->_ole.range->SetText(item->Caption.c_str());
+
+  _component->Tag = ONCHANGE_ALLOW;
 }
 
 void SpellingSetup::UpdateCurrentWord()

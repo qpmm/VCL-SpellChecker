@@ -52,7 +52,7 @@ std::wstring RichEditSpell::SubStr(TextRange Range)
   {
     _ole.text->Range(Range.StartPos, Range.EndPos(), &_ole.range);
     _ole.range->GetText(&buf);
-	substr = buf;
+	  substr = buf;
   }
 
   return substr;
@@ -64,8 +64,6 @@ void RichEditSpell::FindTextRange(TextRange& Range)
 
   std::wstring buf = ToStdStr();
   Range.StartPos = Range.Length = _component->SelStart;
-
-  volatile bool check = isalnum(L'\r', std::locale("Russian_Russia.1251"));
 
   while (ISALNUM(buf[Range.StartPos - 1]) && Range.StartPos - 1 >= 0)
     Range.StartPos--;
@@ -119,9 +117,9 @@ void RichEditSpell::PerformSpell(TextRange Range)
   TextRange word;
   for (unsigned i = 0; i < _speller.Result.size(); ++i)
   {
-	word.StartPos = Range.StartPos + _speller.Result[i].pos;
-	word.Length = _speller.Result[i].len;
-	MarkAsMisspell(word);
+    word.StartPos = Range.StartPos + _speller.Result[i].pos;
+    word.Length = _speller.Result[i].len;
+    MarkAsMisspell(word);
   }
 }
 

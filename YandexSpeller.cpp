@@ -43,6 +43,9 @@ void YandexSpeller::Clear()
 
 void YandexSpeller::ParseJSON(TJSONArray* Content)
 {
+  if (Content->Size() == 0)
+    return;
+
   Result.resize(Content->Size());
   
   for (unsigned i = 0; i < Result.size(); ++i)
@@ -61,7 +64,7 @@ void YandexSpeller::ParseJSON(TJSONArray* Content)
 
     for (unsigned j = 0; j < Result[i].s.size(); ++j)
     {
-      Result[i].s[j] = suggestions->Get(j)->ToString().c_str();
+      Result[i].s[j] = ((TJSONString*)suggestions->Get(j))->Value().c_str();
     }
   }
 }
