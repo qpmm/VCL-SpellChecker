@@ -1,133 +1,77 @@
 ﻿#include "RichEditSpell.h"
 
-TextRange::TextRange()
+#define ONCHANGE_BLOCK 1
+#define ONCHANGE_ALLOW 0
+
+RichEditSpell::RichEditSpell(TForm* form, TRichEdit* component)
 {
-  StartPos = 0;
-  Length = 0;
-}
-
-TextRange::TextRange(int Pos, int Len)
-{
-  StartPos = Pos;
-  Length = Len;
-}
-
-int TextRange::EndPos()
-{
-  return (StartPos + Length);
-}
-
-RichEditSpell::RichEditSpell(TForm* Form, TRichEdit* Component)
-{
-  _mainform = Form;
-  _component = Component;
-
-  memset(&_ole, 0, sizeof(_ole));
-
-  _component->Perform(EM_GETOLEINTERFACE, 0, (int)&_ole.intf);
-  _ole.intf->QueryInterface(__uuidof(ITextDocument), (void**)&_ole.text);
+  _mainform = form;
+  _component = component;
+  ole = new ORichEdit(component);
 }
 
 RichEditSpell::~RichEditSpell()
 {
-  //
+  delete ole;
 }
 
-bool RichEditSpell::CheckRange(TextRange& Range)
-{
-  return (Range.StartPos > 0 && Range.EndPos() <= _component->GetTextLen());
-}
-
-std::wstring RichEditSpell::ToStdStr()
-{
-  return SubStr(TextRange(0, _component->GetTextLen()));
-}
-
-std::wstring RichEditSpell::SubStr(TextRange Range)
-{
-  wchar_t* buf;
-  std::wstring substr;
-
-  if (Range.Length)
-  {
-    _ole.text->Range(Range.StartPos, Range.EndPos(), &_ole.range);
-    _ole.range->GetText(&buf);
-	  substr = buf;
-  }
-
-  return substr;
-}
-
-void RichEditSpell::FindTextRange(TextRange& Range)
+void RichEditSpell::FindTextRange(Range& range)
 {
   #define ISALNUM(x) isalnum((x), std::locale("Russian_Russia.1251"))
+  #define END -1
 
-  std::wstring buf = ToStdStr();
-  Range.StartPos = Range.Length = _component->SelStart;
+  std::wstring buf = ole->GetTextFromRange(Range(0, END));
 
-  while (ISALNUM(buf[Range.StartPos - 1]) && Range.StartPos - 1 >= 0)
-    Range.StartPos--;
-  while (ISALNUM(buf[Range.Length]) && Range.Length < (int)buf.size())
-    Range.Length++;
+  range.Start = range.End = ole->SelRange.Start;
 
-  Range.Length -= Range.StartPos;
+  while (ISALNUM(buf[range.Start - 1]) && range.Start - 1 >= 0)
+    range.Start--;
+  while (ISALNUM(buf[range.End]) && range.End < (long)buf.size())
+    range.End++;
 }
 
 bool RichEditSpell::IsCorrect()
 {
-  long color, pos = _component->SelStart;
-
-  _ole.text->Range(pos, pos + 1, &_ole.range);
-  _ole.range->GetFont(&_ole.style);
-  _ole.style->GetForeColor(&color);
-
-  return (color != clRed);
+  return (ole->GetSelColor() != clRed);
 }
 
-void RichEditSpell::SetStyle(TextRange& Range, long Color)
+void RichEditSpell::MarkAsMisspell(Range range)
 {
-  #define ONCHANGE_BLOCK 1
-  #define ONCHANGE_ALLOW 0
-
   _component->Tag = ONCHANGE_BLOCK;
-  _ole.text->Range(Range.StartPos, Range.EndPos(), &_ole.range);
-  _ole.range->GetFont(&_ole.style);
-  _ole.style->SetForeColor(Color);
-  _ole.range->SetFont(_ole.style);
+  ole->TextRange = range;
+  ole->SetTextColor(clRed);
   _component->Tag = ONCHANGE_ALLOW;
 }
 
-void RichEditSpell::MarkAsMisspell(TextRange Range)
+void RichEditSpell::UnmarkAsMisspell(Range range)
 {
-  SetStyle(Range, clRed);
+  _component->Tag = ONCHANGE_BLOCK;
+  ole->TextRange = range;
+  ole->SetTextColor(tomAutoColor);
+  _component->Tag = ONCHANGE_ALLOW;
 }
 
-void RichEditSpell::UnmarkAsMisspell(TextRange Range)
+void RichEditSpell::PerformSpell(Range range)
 {
-  SetStyle(Range, tomAutoColor);
-}
-
-void RichEditSpell::PerformSpell(TextRange Range)
-{
-  if (Range.Length == 0)
+  if (range.Length() == 0)
     return;
 
-  _speller.CheckText(SubStr(Range));
+  _speller.CheckText(ole->GetTextFromRange(range));
 
-  TextRange word;
+  Range word;
   for (unsigned i = 0; i < _speller.Result.size(); ++i)
   {
-    word.StartPos = Range.StartPos + _speller.Result[i].pos;
-    word.Length = _speller.Result[i].len;
+    word.Start = _speller.Result[i].pos + range.Start;
+    word.End   = _speller.Result[i].len;
     MarkAsMisspell(word);
   }
 }
 
-std::vector<std::wstring>* RichEditSpell::GetSuggestions(int Pos)
+std::vector<std::wstring>* RichEditSpell::GetSuggestions(int pos)
 {
   for (unsigned i = 0; i < _speller.Result.size(); ++i)
   {
-    if (_speller.Result[i].pos == Pos)
+    if (_speller.Result[i].pos == pos)
       return &_speller.Result[i].s;
   }
 

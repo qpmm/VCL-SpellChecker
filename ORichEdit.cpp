@@ -1,128 +1,141 @@
 #include "ORichEdit.h"
 
-TextAttributes::TextAttributes(ITextRange** range)
+Range::Range()
 {
-  _range = range;
+  Start = 0;
+  End = 0;
 }
 
-int TextAttributes::GetColor()
+Range::Range(long start, long end)
 {
-  long color;
-
-  (*_range)->GetFont(&_style);
-  _style->GetForeColor(&color);
-
-  return color;
+  Start = start;
+  End = end;
 }
 
-void TextAttributes::SetColor(int color)
+long Range::Length()
 {
-  (*_range)->GetFont(&_style);
-  _style->SetForeColor(color);
-  (*_range)->SetFont(_style);
+  return (End - Start);
 }
 
-ORichEdit::ORichEdit(TRichEdit* Component)
+ORichEdit::ORichEdit(TRichEdit* component)
 {
   IUnknown* intf;
-  
-  Component->Perform(EM_GETOLEINTERFACE, 0, (int)&intf);
+
+  component->Perform(EM_GETOLEINTERFACE, 0, (int)&intf);
   intf->QueryInterface(__uuidof(ITextDocument), (void**)&_doc);
-
-  SelAttributes = new TextAttributes(&_range);
   _doc->Range(0, 0, &_range);
-  Object = Component;
 }
 
-ORichEdit::~ORichEdit()
+Range ORichEdit::GetSelRange()
 {
-  delete SelAttributes;
-}
-
-int ORichEdit::GetTextLen()
-{
-  long result;
+  Range range;
 
   _doc->GetSelection(&_sel);
-  _sel->GetStoryLength(&result);
+  _sel->GetStart(&range.Start);
+  _sel->GetEnd(&range.End);
 
-  return result;
+  return range;
 }
 
-int ORichEdit::GetSelStart()
+void ORichEdit::SetSelRange(Range range)
 {
-  long result;
-
-  _range->GetStart(&result);
-
-  return result;
+  _doc->GetSelection(&_sel);
+  _sel->SetRange(range.Start, range.End);
 }
 
-void ORichEdit::SetSelStart(int start)
+Range ORichEdit::GetTextRange()
 {
-  _range->SetStart(start);
+  Range range;
+
+  _range->GetStart(&range.Start);
+  _range->GetEnd(&range.End);
+
+  return range;
 }
 
-int ORichEdit::GetSelLength()
+void ORichEdit::SetTextRange(Range range)
 {
-  long start, end;
+  if (range.Start == 0 && range.End == -1)
+    range.End = GetLength();
 
-  _range->GetStart(&start);
-  _range->GetEnd(&end);
-
-  return (end - start);
-}
-
-void ORichEdit::SetSelLength(int length)
-{
-  long start;
-
-  _range->GetStart(&start);
-  _range->SetEnd(start + (long)length);
+  _range->SetRange(range.Start, range.End);
 }
 
 std::wstring ORichEdit::GetSelText()
 {
-  wchar_t* buf;
-
-  _range->GetText(&buf);
-
-  return std::wstring(buf);
+  _doc->GetSelection((ITextSelection**)&_range);
+  return GetText();
 }
 
 void ORichEdit::SetSelText(std::wstring text)
 {
-  _range->SetText((wchar_t*)text.c_str());
+  SetSelText(text.c_str());
 }
 
 void ORichEdit::SetSelText(wchar_t* text)
 {
-  _range->SetText(text);
+  _doc->GetSelection((ITextSelection**)&_range);
+  SetText(text);
 }
 
 std::wstring ORichEdit::GetText()
 {
-  ITextRange* range;
   wchar_t* buf;
-
-  _doc->Range(0, GetTextLen(), &range);
-  range->GetText(&buf);
-
+  _range->GetText(&buf);
   return std::wstring(buf);
 }
 
 void ORichEdit::SetText(std::wstring text)
 {
-  ITextRange* range;
-
-  _doc->Range(0, GetTextLen(), &range);
-  range->SetText((wchar_t*)text.c_str());
+  SetText(text.c_str());
 }
 
 void ORichEdit::SetText(wchar_t* text)
 {
-  ITextRange* range;
+  _range->SetText(text);
+}
 
-  _doc->Range(0, GetTextLen(), &range);
-  range->SetText(text);
+std::wstring ORichEdit::GetTextFromRange(Range range)
+{
+  SetTextRange(range);
+  return GetText();
+}
+
+void ORichEdit::SetTextInRange(Range range, std::wstring text)
+{
+  SetTextInRange(range, text.c_str());
+}
+
+void ORichEdit::SetTextInRange(Range range, wchar_t* text)
+{
+  SetTextRange(range);
+  SetText(text);
+}
+
+int ORichEdit::GetSelColor()
+{
+  long color;
+
+  _doc->GetSelection(&_sel);
+  _sel->GetFont(&_style);
+  _style->GetForeColor(&color);
+
+  return color;
+}
+
+void ORichEdit::SetTextColor(int color)
+{
+  _range->GetFont(&_style);
+  _style->SetForeColor(color);
+  _range->SetFont(_style);
+}
+
+int ORichEdit::GetLength()
+{
+  long length;
+
+  _doc->GetSelection(&_sel);
+  _sel->GetStoryLength(&length);
+
+  return length;
 }

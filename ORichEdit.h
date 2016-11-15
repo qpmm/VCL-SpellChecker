@@ -6,59 +6,56 @@
 #include <tom.h>
 #include <string>
 
-class TextAttributes
+class Range
 {
   public:
-    TextAttributes(ITextRange** range);
+    Range();
+    Range(long start, long end);
 
-    __property int Color = {read = GetColor, write = SetColor};
-    //__property int Style = {read = GetStyle, write = SetStyle};
+    long Length();
 
-    int GetColor();
-    void SetColor(int color);
-
-    //int GetStyle();
-    //void SetStyle(int style);
-
-  private:
-    ITextRange**  _range;
-    ITextFont*    _style;
+    long Start;
+    long End;
 };
 
 class ORichEdit
 {
   public:
-    ORichEdit(TRichEdit* Component);
-    ~ORichEdit();
-    
-    int GetTextLen();
+    ORichEdit(TRichEdit* component);
 
-    __property int SelStart = {read = GetSelStart, write = SetSelStart};
-    __property int SelLength = {read = GetSelLength, write = SetSelLength};
-    __property std::wstring SelText = {read = GetSelText, write = SetSelText};
-    __property std::wstring Text = {read = GetText, write = SetText};
-    
-    int GetSelStart();
-    void SetSelStart(int start);
+    __property Range SelRange = {read = GetSelRange, write = SetSelRange};
+    __property Range TextRange = {read = GetTextRange, write = SetTextRange};
+    __property Range SelText = {read = GetSelText, write = SetSelText};
+    __property Range Text = {read = GetText, write = SetText};
 
-    int GetSelLength();
-    void SetSelLength(int length);
+    Range        GetSelRange();
+    void         SetSelRange(Range range);
+
+    Range        GetTextRange();
+    void         SetTextRange(Range range);
 
     std::wstring GetSelText();
-    void SetSelText(std::wstring text);
-    void SetSelText(wchar_t* text);
+    void         SetSelText(std::wstring text);
+    void         SetSelText(wchar_t* text);
 
     std::wstring GetText();
-    void SetText(std::wstring text);
-    void SetText(wchar_t* text);
+    void         SetText(std::wstring text);
+    void         SetText(wchar_t* text);
 
-    TextAttributes*  SelAttributes;
-    TRichEdit*       Object;
-  
-  //private:
+    std::wstring GetTextFromRange(Range range);
+    void         SetTextInRange(Range range, std::wstring text);
+    void         SetTextInRange(Range range, wchar_t* text);
+
+    int          GetSelColor();
+    void         SetTextColor(int color);
+
+    int          GetLength();
+
+  private:
     ITextDocument*   _doc;
     ITextSelection*  _sel;
     ITextRange*      _range;
+    ITextFont*       _style;
 };
 
 #endif

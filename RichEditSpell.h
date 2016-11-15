@@ -2,31 +2,10 @@
 #define RichEditSpellH
 
 #include <vcl.h>
-#include <richole.h>
-#include <tom.h>
-#include <map>
 #include <locale>
+
 #include "YandexSpeller.h"
-
-class TextRange
-{
-  public:
-    TextRange();
-    TextRange(int Pos, int Len);
-
-    int EndPos();
-
-    int StartPos;
-    int Length;
-};
-
-struct RichEditOLE
-{
-  IUnknown*      intf;
-  ITextDocument* text;
-  ITextRange*    range;
-  ITextFont*     style;
-};
+#include "ORichEdit.h"
 
 class RichEditSpell
 {
@@ -34,22 +13,18 @@ class RichEditSpell
     RichEditSpell(TForm* Form, TRichEdit* Component);
     ~RichEditSpell();
 
-    bool CheckRange(TextRange& Range);
-    void FindTextRange(TextRange& Range);
-    std::wstring ToStdStr();
-    std::wstring SubStr(TextRange Range);
+    void FindTextRange(Range& range);
 
     bool IsCorrect();
-    void SetStyle(TextRange& Range, long Color);
-    void MarkAsMisspell(TextRange Range);
-    void UnmarkAsMisspell(TextRange Range);
-    void PerformSpell(TextRange Range);
+    void MarkAsMisspell(Range range);
+    void UnmarkAsMisspell(Range range);
+    void PerformSpell(Range range);
 
-    std::vector<std::wstring>* GetSuggestions(int Pos);
+    std::vector<std::wstring>* GetSuggestions(int pos);
 
-    RichEditOLE _ole;
+    ORichEdit* ole;
 
-  //private:
+  private:
     TForm*         _mainform;
     TRichEdit*     _component;
 	  YandexSpeller  _speller;

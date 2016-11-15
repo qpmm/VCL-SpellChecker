@@ -1,17 +1,19 @@
 #include <vcl.h>
 #include <locale>
 #include "RichEditSpell.h"
+#include "ORichEdit.h"
 
 #define ONCHANGE_BLOCK 1
 #define ONCHANGE_ALLOW 0
 
 //#define ISMODIF(x) (isprint((x), std::locale("Russian_Russia.1251")) || (x) == VK_DELETE || (x) == VK_BACK)
 #define ISDELIM(x) (isspace((x), std::locale("Russian_Russia.1251")) || ispunct((x), std::locale("Russian_Russia.1251")))
+#define END -1
 
 struct CurrentWord
 {
-  TextRange  Bounds;
-  bool       IsCorrect;
+  Range  Bounds;
+  bool   IsCorrect;
 };
 
 struct OnKeyDownValues
@@ -38,7 +40,7 @@ class SpellingSetup
     SpellingSetup();
     ~SpellingSetup();
 
-    void Init(TForm* Form, TRichEdit* Component);
+    void Init(TForm* form, TRichEdit* component);
     void Cleanup();
 
     void __fastcall OnKeyDownWrapper (TObject* Sender, WORD&    Key, TShiftState Shift);
@@ -71,10 +73,9 @@ SpellingSetup::~SpellingSetup()
   Cleanup();
 }
 
-void SpellingSetup::Init(TForm* Form, TRichEdit* Component)
+void SpellingSetup::Init(TForm* form, TRichEdit* component)
 {
-  _component = Component;
-
+  _component = component;
   _component->PopupMenu = new TPopupMenu(_component);
 
   _handlers.OnKeyDown  = _component->OnKeyDown;
@@ -91,11 +92,10 @@ void SpellingSetup::Init(TForm* Form, TRichEdit* Component)
   _component->OnMouseUp   = OnMouseUpWrapper;
   _component->OnExit      = OnExitWrapper;
 
-  _wrapper = new RichEditSpell(Form, _component);
-
+  _wrapper = new RichEditSpell(form, _component);
   _wrapper->FindTextRange(_keydown.Word.Bounds);
   _keydown.Word.IsCorrect = _wrapper->IsCorrect();
-  _wrapper->PerformSpell(TextRange(0, _component->GetTextLen()));
+  _wrapper->PerformSpell(Range(0, END));
 }
 
 void SpellingSetup::Cleanup()
@@ -125,12 +125,12 @@ void __fastcall SpellingSetup::OnKeyDownWrapper(TObject* Sender, WORD& Key, TShi
   if (_handlers.OnKeyDown)
     _handlers.OnKeyDown(Sender, Key, Shift);
 
-  if (_component->SelLength)
+  if (_wrapper->ole->SelRange.Length())
     _wrapper->FindTextRange(_keydown.Word.Bounds);
 
   _component->SelAttributes->Color = (TColor)tomAutoColor;
 
-  _keydown.TextPos = _component->SelStart;
+  _keydown.TextPos = _wrapper->ole->SelRange.Start;
   _keydown.CharKey = '\0';
   _keydown.RawKey = Key;
   _keydown.Word.IsCorrect = _wrapper->IsCorrect();
@@ -170,8 +170,8 @@ void __fastcall SpellingSetup::OnChangeWrapper(TObject* Sender)
   if (_component->Tag == ONCHANGE_BLOCK)
 		return;
 
-  int posDiff = _component->SelStart - _keydown.TextPos;
-  TextRange newWord;
+  Range newWord;
+  int posDiff = _wrapper->ole->SelRange.Start - _keydown.TextPos;
   _wrapper->FindTextRange(newWord);
 
   if (!_keydown.Word.IsCorrect)
@@ -182,7 +182,7 @@ void __fastcall SpellingSetup::OnChangeWrapper(TObject* Sender)
   if (ISDELIM(_keydown.CharKey) || _keydown.RawKey == VK_RETURN || posDiff > 1)
   {
     if (posDiff > 1)
-      _keydown.Word.Bounds.Length += posDiff;
+      _keydown.Word.Bounds.End += posDiff;
 	  _wrapper->PerformSpell(_keydown.Word.Bounds);
   }
 
@@ -196,14 +196,18 @@ void __fastcall SpellingSetup::OnMouseUpWrapper(TObject* Sender, TMouseButton Bu
     _handlers.OnMouseUp(Sender, Button, Shift, X, Y);
 
   if (Button == mbRight)
-    _component->SelStart = _component->Perform(EM_CHARFROMPOS, 0, (int)&TPoint(X, Y));
+  {
+    int start = _component->Perform(EM_CHARFROMPOS, 0, (int)&TPoint(X, Y));
+    _wrapper->ole->SelRange = Range(start, start);
+  }
 
   UpdateCurrentWord();
 
   if (Button == mbRight)
   {
     _component->PopupMenu->Items->Clear();
-    std::vector<std::wstring>* suggs = _wrapper->GetSuggestions(_keydown.Word.Bounds.StartPos);
+    _wrapper->PerformSpell(_keydown.Word.Bounds);
+    std::vector<std::wstring>* suggs = _wrapper->GetSuggestions(_keydown.Word.Bounds.Start);
 
     if (suggs && suggs->size())
     {
@@ -244,25 +248,21 @@ void __fastcall SpellingSetup::OnExitWrapper(TObject* Sender)
 void __fastcall SpellingSetup::OnMenuItemClick(TObject* Sender)
 {
   TMenuItem* item = (TMenuItem*)Sender;
-  TextRange* range = (TextRange*)(item->Tag);
-  ITextSelection* sel;
+  Range* range = (Range*)(item->Tag);
 
   _component->Tag = ONCHANGE_BLOCK;
-
   _wrapper->UnmarkAsMisspell(*range);
-  _wrapper->_ole.text->Range(range->StartPos, range->EndPos(), &(_wrapper->_ole.range));
-  _wrapper->_ole.range->SetText(item->Caption.c_str());
-
+  _wrapper->ole->SetTextInRange(*range, item->Caption.c_str());
   _component->Tag = ONCHANGE_ALLOW;
 }
 
 void SpellingSetup::UpdateCurrentWord()
 {
-  int NewPos = _component->SelStart;
+  int NewPos = _wrapper->ole->SelRange.Start;
 
   if (   _keydown.Word.IsCorrect
-	    && _keydown.Word.Bounds.Length
-      && (NewPos < _keydown.Word.Bounds.StartPos || NewPos > _keydown.Word.Bounds.EndPos()))
+	    && _keydown.Word.Bounds.Length()
+      && (NewPos < _keydown.Word.Bounds.Start || NewPos > _keydown.Word.Bounds.End))
   {
 	  _wrapper->PerformSpell(_keydown.Word.Bounds);
   }
