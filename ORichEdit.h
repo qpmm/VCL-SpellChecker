@@ -35,15 +35,15 @@ class ORichEdit
     void         SetTextRange(Range range);
 
     std::wstring GetSelText();
-    void         SetSelText(std::wstring text);
+    //void         SetSelText(std::wstring text);
     void         SetSelText(wchar_t* text);
 
     std::wstring GetText();
-    void         SetText(std::wstring text);
+    //void         SetText(std::wstring text);
     void         SetText(wchar_t* text);
 
     std::wstring GetTextFromRange(Range range);
-    void         SetTextInRange(Range range, std::wstring text);
+    //void         SetTextInRange(Range range, std::wstring text);
     void         SetTextInRange(Range range, wchar_t* text);
 
     int          GetSelColor();

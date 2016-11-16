@@ -15,12 +15,15 @@ class RichEditSpell
 
     void FindTextRange(Range& range);
 
+    int FindWordStart();
+    int FindWordEnd();
+
     bool IsCorrect();
     void MarkAsMisspell(Range range);
     void UnmarkAsMisspell(Range range);
     void PerformSpell(Range range);
 
-    std::vector<std::wstring>* GetSuggestions(int pos);
+    std::vector<std::wstring>& GetSuggestions(int pos);
 
     ORichEdit* ole;
 

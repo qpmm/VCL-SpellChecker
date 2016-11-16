@@ -58,7 +58,7 @@ void ORichEdit::SetTextRange(Range range)
   if (range.Start == 0 && range.End == -1)
     range.End = GetLength();
 
-  _range->SetRange(range.Start, range.End);
+  _doc->Range(range.Start, range.End, &_range);
 }
 
 std::wstring ORichEdit::GetSelText()
@@ -67,10 +67,10 @@ std::wstring ORichEdit::GetSelText()
   return GetText();
 }
 
-void ORichEdit::SetSelText(std::wstring text)
-{
-  SetSelText(text.c_str());
-}
+//void ORichEdit::SetSelText(std::wstring text)
+//{
+//  SetSelText(text.c_str());
+//}
 
 void ORichEdit::SetSelText(wchar_t* text)
 {
@@ -85,14 +85,14 @@ std::wstring ORichEdit::GetText()
   return std::wstring(buf);
 }
 
-void ORichEdit::SetText(std::wstring text)
-{
-  SetText(text.c_str());
-}
-
+//void ORichEdit::SetText(std::wstring text)
+//{
+//  SetText(text.c_str());
+//}
 void ORichEdit::SetText(wchar_t* text)
 {
-  _range->SetText(text);
+  std::wstring stroka = text;
+  _range->SetText((wchar_t*)stroka.c_str());
 }
 
 std::wstring ORichEdit::GetTextFromRange(Range range)
@@ -101,11 +101,10 @@ std::wstring ORichEdit::GetTextFromRange(Range range)
   return GetText();
 }
 
-void ORichEdit::SetTextInRange(Range range, std::wstring text)
-{
-  SetTextInRange(range, text.c_str());
-}
-
+//void ORichEdit::SetTextInRange(Range range, std::wstring text)
+//{
+//  SetTextInRange(range, text.c_str());
+//}
 void ORichEdit::SetTextInRange(Range range, wchar_t* text)
 {
   SetTextRange(range);

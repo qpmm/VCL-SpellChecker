@@ -1,7 +1,4 @@
-#include <vcl.h>
-#include <locale>
-#include "RichEditSpell.h"
-#include "ORichEdit.h"
+#include "SpellingSetup.h"
 
 #define ONCHANGE_BLOCK 1
 #define ONCHANGE_ALLOW 0
@@ -9,56 +6,6 @@
 //#define ISMODIF(x) (isprint((x), std::locale("Russian_Russia.1251")) || (x) == VK_DELETE || (x) == VK_BACK)
 #define ISDELIM(x) (isspace((x), std::locale("Russian_Russia.1251")) || ispunct((x), std::locale("Russian_Russia.1251")))
 #define END -1
-
-struct CurrentWord
-{
-  Range  Bounds;
-  bool   IsCorrect;
-};
-
-struct OnKeyDownValues
-{
-  CurrentWord Word;
-  int         TextPos;
-  WORD        RawKey;
-  wchar_t     CharKey;
-};
-
-struct EventHandlers
-{
-  TKeyEvent         OnKeyDown;
-  TKeyEvent         OnKeyUp;
-  TKeyPressEvent    OnKeyPress;
-  TNotifyEvent      OnChange;
-  TMouseEvent       OnMouseUp;
-  TNotifyEvent      OnExit;
-};
-
-class SpellingSetup
-{
-  public:
-    SpellingSetup();
-    ~SpellingSetup();
-
-    void Init(TForm* form, TRichEdit* component);
-    void Cleanup();
-
-    void __fastcall OnKeyDownWrapper (TObject* Sender, WORD&    Key, TShiftState Shift);
-    void __fastcall OnKeyUpWrapper   (TObject* Sender, WORD&    Key, TShiftState Shift);
-    void __fastcall OnKeyPressWrapper(TObject* Sender, wchar_t& Key);
-    void __fastcall OnChangeWrapper  (TObject* Sender);
-    void __fastcall OnMouseUpWrapper (TObject* Sender, TMouseButton Button, TShiftState Shift, int X, int Y);
-    void __fastcall OnExitWrapper    (TObject* Sender);
-    void __fastcall OnMenuItemClick  (TObject* Sender);
-
-    void UpdateCurrentWord();
-    
-  private:
-    TRichEdit*       _component;
-    RichEditSpell*   _wrapper;
-    EventHandlers    _handlers;
-    OnKeyDownValues  _keydown;
-};
 
 SpellingSetup::SpellingSetup()
 {
@@ -76,7 +23,7 @@ SpellingSetup::~SpellingSetup()
 void SpellingSetup::Init(TForm* form, TRichEdit* component)
 {
   _component = component;
-  _component->PopupMenu = new TPopupMenu(_component);
+  //_component->PopupMenu = new TPopupMenu(_component);
 
   _handlers.OnKeyDown  = _component->OnKeyDown;
   _handlers.OnKeyUp    = _component->OnKeyUp;
@@ -94,8 +41,8 @@ void SpellingSetup::Init(TForm* form, TRichEdit* component)
 
   _wrapper = new RichEditSpell(form, _component);
   _wrapper->FindTextRange(_keydown.Word.Bounds);
-  _keydown.Word.IsCorrect = _wrapper->IsCorrect();
   _wrapper->PerformSpell(Range(0, END));
+  _keydown.Word.IsCorrect = _wrapper->IsCorrect();
 }
 
 void SpellingSetup::Cleanup()
@@ -203,19 +150,22 @@ void __fastcall SpellingSetup::OnMouseUpWrapper(TObject* Sender, TMouseButton Bu
 
   UpdateCurrentWord();
 
+  if (_keydown.Word.Bounds.Length() == 0 || _keydown.Word.IsCorrect)
+    return;
+
   if (Button == mbRight)
   {
     _component->PopupMenu->Items->Clear();
     _wrapper->PerformSpell(_keydown.Word.Bounds);
-    std::vector<std::wstring>* suggs = _wrapper->GetSuggestions(_keydown.Word.Bounds.Start);
+    std::vector<std::wstring>& suggs = _wrapper->GetSuggestions(_keydown.Word.Bounds.Start);
 
-    if (suggs && suggs->size())
+    if (suggs.size())
     {
-      for (unsigned i = 0; i < suggs->size(); ++i)
+      for (unsigned i = 0; i < suggs.size(); ++i)
       {
         TMenuItem* item = new TMenuItem(_component->PopupMenu);
 
-        item->Caption = suggs->at(i).c_str();
+        item->Caption = suggs[i].c_str();
         item->Tag = (int)&_keydown.Word.Bounds;
         item->OnClick = OnMenuItemClick;
 

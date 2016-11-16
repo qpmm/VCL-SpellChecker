@@ -17,7 +17,7 @@ RichEditSpell::~RichEditSpell()
 
 void RichEditSpell::FindTextRange(Range& range)
 {
-  #define ISALNUM(x) isalnum((x), std::locale("Russian_Russia.1251"))
+  /*#define ISALNUM(x) isalnum((x), std::locale("Russian_Russia.1251"))
   #define END -1
 
   std::wstring buf = ole->GetTextFromRange(Range(0, END));
@@ -27,7 +27,33 @@ void RichEditSpell::FindTextRange(Range& range)
   while (ISALNUM(buf[range.Start - 1]) && range.Start - 1 >= 0)
     range.Start--;
   while (ISALNUM(buf[range.End]) && range.End < (long)buf.size())
-    range.End++;
+    range.End++;*/
+
+  int s = range.Start = range.End = ole->SelRange.Start;
+
+  bool delimToLeft  = _component->Perform(EM_FINDWORDBREAK, WB_ISDELIMITER, s - 1);
+  bool delimToRight = _component->Perform(EM_FINDWORDBREAK, WB_ISDELIMITER, s);
+
+  if (!delimToLeft)
+  {
+    range.Start = _component->Perform(EM_FINDWORDBREAK, WB_LEFT, s);
+  }
+
+  if (!delimToRight)
+  {
+    range.End = _component->Perform(EM_FINDWORDBREAK, WB_RIGHT, s);
+  }
+}
+
+int RichEditSpell::FindWordStart()
+{
+  //_component->Perform(EM_FINDWORDBREAK, WB_LEFT, _component->SelStart);
+  return 0;
+}
+
+int RichEditSpell::FindWordEnd()
+{
+  return 0;
 }
 
 bool RichEditSpell::IsCorrect()
@@ -62,18 +88,12 @@ void RichEditSpell::PerformSpell(Range range)
   for (unsigned i = 0; i < _speller.Result.size(); ++i)
   {
     word.Start = _speller.Result[i].pos + range.Start;
-    word.End   = _speller.Result[i].len;
+    word.End   = _speller.Result[i].len + word.Start;
     MarkAsMisspell(word);
   }
 }
 
-std::vector<std::wstring>* RichEditSpell::GetSuggestions(int pos)
+std::vector<std::wstring>& RichEditSpell::GetSuggestions(int pos)
 {
-  for (unsigned i = 0; i < _speller.Result.size(); ++i)
-  {
-    if (_speller.Result[i].pos == pos)
-      return &_speller.Result[i].s;
-  }
-
-  return NULL;
+  return _speller.Result.back().s;
 }
