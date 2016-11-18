@@ -3,9 +3,8 @@
 #define ONCHANGE_BLOCK 1
 #define ONCHANGE_ALLOW 0
 
-RichEditSpell::RichEditSpell(TForm* form, TRichEdit* component)
+RichEditSpell::RichEditSpell(TRichEdit* component)
 {
-  _mainform = form;
   _component = component;
   ole = new ORichEdit(component);
 }
@@ -17,7 +16,7 @@ RichEditSpell::~RichEditSpell()
 
 void RichEditSpell::FindTextRange(Range& range)
 {
-  /*#define ISALNUM(x) isalnum((x), std::locale("Russian_Russia.1251"))
+  #define ISALNUM(x) isalnum((x), std::locale("Russian_Russia.1251"))
   #define END -1
 
   std::wstring buf = ole->GetTextFromRange(Range(0, END));
@@ -27,22 +26,39 @@ void RichEditSpell::FindTextRange(Range& range)
   while (ISALNUM(buf[range.Start - 1]) && range.Start - 1 >= 0)
     range.Start--;
   while (ISALNUM(buf[range.End]) && range.End < (long)buf.size())
-    range.End++;*/
+    range.End++;
 
-  int s = range.Start = range.End = ole->SelRange.Start;
+//  int s = range.Start = range.End = ole->SelRange.Start;
+//
+//  bool delimToLeft  = _component->Perform(EM_FINDWORDBREAK, WB_ISDELIMITER, s - 1);
+//  bool delimToRight = _component->Perform(EM_FINDWORDBREAK, WB_ISDELIMITER, s);
+//
+//  if (!delimToLeft)
+//  {
+//    range.Start = _component->Perform(EM_FINDWORDBREAK, WB_LEFT, s);
+//  }
+//
+//  if (!delimToRight)
+//  {
+//    s = _component->Perform(EM_FINDWORDBREAK, WB_RIGHT, s);
+//    range.End = _component->Perform(EM_FINDWORDBREAK, WB_LEFT, s);
+//  }
+}
 
-  bool delimToLeft  = _component->Perform(EM_FINDWORDBREAK, WB_ISDELIMITER, s - 1);
-  bool delimToRight = _component->Perform(EM_FINDWORDBREAK, WB_ISDELIMITER, s);
+Range RichEditSpell::FindTextRange(int pos)
+{
+  int start, end;
 
-  if (!delimToLeft)
-  {
-    range.Start = _component->Perform(EM_FINDWORDBREAK, WB_LEFT, s);
-  }
+  std::wstring buf = ole->GetTextFromRange(Range(0, END));
 
-  if (!delimToRight)
-  {
-    range.End = _component->Perform(EM_FINDWORDBREAK, WB_RIGHT, s);
-  }
+  start = end = pos;
+
+  while (ISALNUM(buf[start - 1]) && start - 1 >= 0)
+    start--;
+  while (ISALNUM(buf[end]) && end < (long)buf.size())
+    end++;
+
+  return Range(start, end);
 }
 
 int RichEditSpell::FindWordStart()
@@ -56,8 +72,14 @@ int RichEditSpell::FindWordEnd()
   return 0;
 }
 
-bool RichEditSpell::IsCorrect()
+bool RichEditSpell::IsCorrect(int pos)
 {
+  if (pos != -1)
+  {
+    ole->SetTextRange(Range(pos, pos));
+    return (ole->GetTextColor() != clRed);
+  }
+
   return (ole->GetSelColor() != clRed);
 }
 

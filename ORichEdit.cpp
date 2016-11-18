@@ -113,10 +113,27 @@ void ORichEdit::SetTextInRange(Range range, wchar_t* text)
 
 int ORichEdit::GetSelColor()
 {
+  Range selection;
   long color;
 
   _doc->GetSelection(&_sel);
+  //_sel->
+  //selection = GetSelRange();
+
+//  if (selection.Length() == 0)
+//    _sel->SetEnd(selection.Start + 1);
+
   _sel->GetFont(&_style);
+  _style->GetForeColor(&color);
+
+  return color;
+}
+
+int ORichEdit::GetTextColor()
+{
+  long color;
+
+  _range->GetFont(&_style);
   _style->GetForeColor(&color);
 
   return color;

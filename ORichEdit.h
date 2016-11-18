@@ -47,11 +47,12 @@ class ORichEdit
     void         SetTextInRange(Range range, wchar_t* text);
 
     int          GetSelColor();
+    int          GetTextColor();
     void         SetTextColor(int color);
 
     int          GetLength();
 
-  private:
+  //private:
     ITextDocument*   _doc;
     ITextSelection*  _sel;
     ITextRange*      _range;

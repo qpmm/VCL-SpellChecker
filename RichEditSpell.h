@@ -10,15 +10,16 @@
 class RichEditSpell
 {
   public:
-    RichEditSpell(TForm* Form, TRichEdit* Component);
+    RichEditSpell(TRichEdit* Component);
     ~RichEditSpell();
 
-    void FindTextRange(Range& range);
+    void  FindTextRange(Range& range);
+    Range FindTextRange(int pos);
 
     int FindWordStart();
     int FindWordEnd();
 
-    bool IsCorrect();
+    bool IsCorrect(int pos = -1);
     void MarkAsMisspell(Range range);
     void UnmarkAsMisspell(Range range);
     void PerformSpell(Range range);
@@ -28,7 +29,6 @@ class RichEditSpell
     ORichEdit* ole;
 
   private:
-    TForm*         _mainform;
     TRichEdit*     _component;
 	  YandexSpeller  _speller;
 };

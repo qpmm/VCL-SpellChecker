@@ -12,12 +12,12 @@ struct CurrentWord
   bool   IsCorrect;
 };
 
-struct OnKeyDownValues
+struct PreOnChangeValues
 {
-  CurrentWord Word;
-  int         TextPos;
+  int         CursorPos;
   WORD        RawKey;
   wchar_t     CharKey;
+  CurrentWord Word;
 };
 
 struct EventHandlers
@@ -26,7 +26,7 @@ struct EventHandlers
   TKeyEvent         OnKeyUp;
   TKeyPressEvent    OnKeyPress;
   TNotifyEvent      OnChange;
-  TMouseEvent       OnMouseUp;
+  TMouseEvent       OnMouseDown;
   TNotifyEvent      OnExit;
 };
 
@@ -37,23 +37,25 @@ class SpellingSetup
     ~SpellingSetup();
 
     void Init(TForm* form, TRichEdit* component);
-    void Cleanup();
 
-    void __fastcall OnKeyDownWrapper (TObject* Sender, WORD&    Key, TShiftState Shift);
-    void __fastcall OnKeyUpWrapper   (TObject* Sender, WORD&    Key, TShiftState Shift);
-    void __fastcall OnKeyPressWrapper(TObject* Sender, wchar_t& Key);
-    void __fastcall OnChangeWrapper  (TObject* Sender);
-    void __fastcall OnMouseUpWrapper (TObject* Sender, TMouseButton Button, TShiftState Shift, int X, int Y);
-    void __fastcall OnExitWrapper    (TObject* Sender);
-    void __fastcall OnMenuItemClick  (TObject* Sender);
+    void Disable();
+
+    void __fastcall OnKeyDownWrapper  (TObject* Sender, WORD&    Key, TShiftState Shift);
+    void __fastcall OnKeyUpWrapper    (TObject* Sender, WORD&    Key, TShiftState Shift);
+    void __fastcall OnKeyPressWrapper (TObject* Sender, wchar_t& Key);
+    void __fastcall OnChangeWrapper   (TObject* Sender);
+    void __fastcall OnMouseDownWrapper(TObject* Sender, TMouseButton Button, TShiftState Shift, int X, int Y);
+    void __fastcall OnExitWrapper     (TObject* Sender);
+    void __fastcall OnMenuItemClick   (TObject* Sender);
 
     void UpdateCurrentWord();
     
   private:
-    TRichEdit*       _component;
-    RichEditSpell*   _wrapper;
-    EventHandlers    _handlers;
-    OnKeyDownValues  _keydown;
+    TForm*             _mainform;
+    TRichEdit*         _component;
+    RichEditSpell*     _richspell;
+    EventHandlers      _handlers;
+    PreOnChangeValues  _values;
 };
 
 #endif
