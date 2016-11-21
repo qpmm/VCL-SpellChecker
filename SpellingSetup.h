@@ -46,7 +46,10 @@ class SpellingSetup
     void __fastcall OnChangeWrapper   (TObject* Sender);
     void __fastcall OnMouseDownWrapper(TObject* Sender, TMouseButton Button, TShiftState Shift, int X, int Y);
     void __fastcall OnExitWrapper     (TObject* Sender);
+
     void __fastcall OnMenuItemClick   (TObject* Sender);
+    void __fastcall OnPopupWrapper    (TObject* Sender);
+
 
     void UpdateCurrentWord();
     

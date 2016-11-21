@@ -24,7 +24,8 @@ void SpellingSetup::Init(TForm* form, TRichEdit* component)
 {
   _mainform = form;
   _component = component;
-  //_component->PopupMenu = new TPopupMenu(_component);
+  _component->PopupMenu = new TPopupMenu(_component);
+  _component->PopupMenu->AutoPopup = false;
 
   _handlers.OnKeyDown    = _component->OnKeyDown;
   _handlers.OnKeyUp      = _component->OnKeyUp;
@@ -63,8 +64,8 @@ void SpellingSetup::Disable()
     _component->OnMouseDown  = _handlers.OnMouseDown;
     _component->OnExit       = _handlers.OnExit;
 
-//    delete _component->PopupMenu;
-//    _component->PopupMenu = NULL;
+    delete _component->PopupMenu;
+    _component->PopupMenu = NULL;
     _component = NULL;
   }
 }
@@ -159,8 +160,7 @@ void __fastcall SpellingSetup::OnMouseDownWrapper(TObject* Sender, TMouseButton 
     int cursorPos = _component->Perform(EM_CHARFROMPOS, 0, (int)&TPoint(X, Y));
     Range selWord = _richspell->FindTextRange(cursorPos);
 
-    // Исправить ошибку с определением цвета текста в GetTextColor, если start == end
-    if (selWord.Length() == 0 || _richspell->IsCorrect(selWord.Start))
+    if (selWord.Length() == 0 || _richspell->IsCorrect(selWord.Start + 1))
       return;
 
     //_richspell->PerformSpell(_values.Word.Bounds);
@@ -169,8 +169,9 @@ void __fastcall SpellingSetup::OnMouseDownWrapper(TObject* Sender, TMouseButton 
     //std::vector<std::wstring>& suggs = _richspell->GetSuggestions(_values.Word.Bounds.Start);
     std::vector<std::wstring>& suggs = _richspell->GetSuggestions(selWord.Start);
 
-    _component->PopupMenu = new TPopupMenu(NULL);
-    //_component->PopupMenu->Items->Clear();
+    //_component->PopupMenu = new TPopupMenu(_component);
+    //_component->PopupMenu->AutoPopup = false;
+    _component->PopupMenu->Items->Clear();
 
     if (suggs.size())
     {
@@ -220,6 +221,20 @@ void __fastcall SpellingSetup::OnMenuItemClick(TObject* Sender)
 
   delete range;
   delete ((TPopupMenu*)item->Owner);
+}
+
+void __fastcall SpellingSetup::OnPopupWrapper(TObject* Sender)
+{
+  TMenuItem* item = (TMenuItem*)Sender;
+  Range* range = (Range*)item->Tag;
+
+  _component->Tag = ONCHANGE_BLOCK;
+  _richspell->UnmarkAsMisspell(*range);
+  _richspell->ole->SetTextInRange(*range, item->Caption.c_str());
+  _component->Tag = ONCHANGE_ALLOW;
+
+  delete range;
+  //delete ((TPopupMenu*)item->Owner);
 }
 
 void SpellingSetup::UpdateCurrentWord()

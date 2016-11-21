@@ -117,5 +117,5 @@ void RichEditSpell::PerformSpell(Range range)
 
 std::vector<std::wstring>& RichEditSpell::GetSuggestions(int pos)
 {
-  return _speller.Result.back().s;
+  return _speller.Result[0].s;
 }
