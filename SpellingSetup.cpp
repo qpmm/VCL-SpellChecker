@@ -75,17 +75,17 @@ void __fastcall SpellingSetup::OnKeyDownWrapper(TObject* Sender, WORD& Key, TShi
   if (_handlers.OnKeyDown)
     _handlers.OnKeyDown(Sender, Key, Shift);
 
-  //_component->SelAttributes->Color = (TColor)tomAutoColor;
-
   Range selRange = _richspell->ole->SelRange;
 
   _values.CursorPos = selRange.Start;
   _values.CharKey = '\0';
   _values.RawKey = Key;
-  _values.Word.IsCorrect = _richspell->IsCorrect();
+  _values.Word.IsCorrect = _richspell->IsCorrect(selRange.Start);
 
   if (selRange.Length())
     _richspell->FindTextRange(_values.Word.Bounds);
+
+  _component->SelAttributes->Color = (TColor)tomAutoColor;
 }
 
 void __fastcall SpellingSetup::OnKeyUpWrapper(TObject* Sender, WORD& Key, TShiftState Shift)
@@ -122,18 +122,22 @@ void __fastcall SpellingSetup::OnChangeWrapper(TObject* Sender)
   if (_component->Tag == ONCHANGE_BLOCK)
 		return;
 
-  Range newWord;
+
   int posDiff = _richspell->ole->SelRange.Start - _values.CursorPos;
+
+
+
+  Range newWord;
   _richspell->FindTextRange(newWord);
 
   if (!_values.Word.IsCorrect)
-	  _richspell->UnmarkAsMisspell(_values.Word.Bounds);
+	  _richspell->UnmarkAsMisspell(_values.Word.Bounds); // здесь word bounds должны заключать границы старого слова + длину изменения
 
-  _richspell->UnmarkAsMisspell(newWord);
+  //_richspell->UnmarkAsMisspell(newWord);
 
   if (ISDELIM(_values.CharKey) || _values.RawKey == VK_RETURN || posDiff > 1)
   {
-    if (posDiff > 1)
+    //if (posDiff > 1)
       _values.Word.Bounds.End += posDiff;
 	  _richspell->PerformSpell(_values.Word.Bounds);
   }
@@ -163,14 +167,9 @@ void __fastcall SpellingSetup::OnMouseDownWrapper(TObject* Sender, TMouseButton 
     if (selWord.Length() == 0 || _richspell->IsCorrect(selWord.Start + 1))
       return;
 
-    //_richspell->PerformSpell(_values.Word.Bounds);
     _richspell->PerformSpell(selWord);
 
-    //std::vector<std::wstring>& suggs = _richspell->GetSuggestions(_values.Word.Bounds.Start);
     std::vector<std::wstring>& suggs = _richspell->GetSuggestions(selWord.Start);
-
-    //_component->PopupMenu = new TPopupMenu(_component);
-    //_component->PopupMenu->AutoPopup = false;
     _component->PopupMenu->Items->Clear();
 
     if (suggs.size())
@@ -220,28 +219,13 @@ void __fastcall SpellingSetup::OnMenuItemClick(TObject* Sender)
   _component->Tag = ONCHANGE_ALLOW;
 
   delete range;
-  delete ((TPopupMenu*)item->Owner);
-}
-
-void __fastcall SpellingSetup::OnPopupWrapper(TObject* Sender)
-{
-  TMenuItem* item = (TMenuItem*)Sender;
-  Range* range = (Range*)item->Tag;
-
-  _component->Tag = ONCHANGE_BLOCK;
-  _richspell->UnmarkAsMisspell(*range);
-  _richspell->ole->SetTextInRange(*range, item->Caption.c_str());
-  _component->Tag = ONCHANGE_ALLOW;
-
-  delete range;
-  //delete ((TPopupMenu*)item->Owner);
 }
 
 void SpellingSetup::UpdateCurrentWord()
 {
   int newPos = _richspell->ole->SelRange.Start;
 
-  if (   _values.Word.IsCorrect
+  if (   _richspell->IsCorrect()
 	    && _values.Word.Bounds.Length()
       && (newPos < _values.Word.Bounds.Start || newPos > _values.Word.Bounds.End))
   {

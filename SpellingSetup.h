@@ -9,6 +9,7 @@
 struct CurrentWord
 {
   Range  Bounds;
+  Range  NewBounds;
   bool   IsCorrect;
 };
 
@@ -48,8 +49,6 @@ class SpellingSetup
     void __fastcall OnExitWrapper     (TObject* Sender);
 
     void __fastcall OnMenuItemClick   (TObject* Sender);
-    void __fastcall OnPopupWrapper    (TObject* Sender);
-
 
     void UpdateCurrentWord();
     
