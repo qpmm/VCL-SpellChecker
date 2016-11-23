@@ -1,8 +1,5 @@
 ﻿#include "RichEditSpell.h"
 
-#define ONCHANGE_BLOCK 1
-#define ONCHANGE_ALLOW 0
-
 RichEditSpell::RichEditSpell(TRichEdit* component)
 {
   _component = component;
@@ -16,17 +13,7 @@ RichEditSpell::~RichEditSpell()
 
 void RichEditSpell::FindTextRange(Range& range)
 {
-  #define ISALNUM(x) isalnum((x), std::locale("Russian_Russia.1251"))
-  #define END -1
-
-  std::wstring buf = ole->GetTextFromRange(Range(0, END));
-
-  range.Start = range.End = ole->SelRange.Start;
-
-  while (ISALNUM(buf[range.Start - 1]) && range.Start - 1 >= 0)
-    range.Start--;
-  while (ISALNUM(buf[range.End]) && range.End < (long)buf.size())
-    range.End++;
+  range = FindTextRange(ole->SelRange.Start);
 
 //  int s = range.Start = range.End = ole->SelRange.Start;
 //
@@ -47,11 +34,9 @@ void RichEditSpell::FindTextRange(Range& range)
 
 Range RichEditSpell::FindTextRange(int pos)
 {
-  int start, end;
+  int start = pos, end = pos;
 
-  std::wstring buf = ole->GetTextFromRange(Range(0, END));
-
-  start = end = pos;
+  std::wstring buf = ole->GetTextFromRange(ole->GetTextBounds());
 
   while (ISALNUM(buf[start - 1]) && start - 1 >= 0)
     start--;
@@ -74,7 +59,7 @@ int RichEditSpell::FindWordEnd()
 
 bool RichEditSpell::IsCorrect(int pos)
 {
-  if (pos != -1)
+  if (pos != CURRENT_POS)
   {
     ole->SetTextRange(Range(pos, pos));
     return (ole->GetTextColor() != clRed);

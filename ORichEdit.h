@@ -5,6 +5,7 @@
 #include <richole.h>
 #include <tom.h>
 #include <string>
+#include "defines.h"
 
 class Range
 {
@@ -50,9 +51,10 @@ class ORichEdit
     int          GetTextColor();
     void         SetTextColor(int color);
 
-    int          GetLength();
+    Range        GetTextBounds();
+    std::wstring GetFullText();
 
-  //private:
+  private:
     ITextDocument*   _doc;
     ITextSelection*  _sel;
     ITextRange*      _range;

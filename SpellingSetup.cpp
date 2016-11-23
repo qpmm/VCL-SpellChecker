@@ -1,12 +1,5 @@
 #include "SpellingSetup.h"
 
-#define ONCHANGE_BLOCK 1
-#define ONCHANGE_ALLOW 0
-
-//#define ISMODIF(x) (isprint((x), std::locale("Russian_Russia.1251")) || (x) == VK_DELETE || (x) == VK_BACK)
-#define ISDELIM(x) (isspace((x), std::locale("Russian_Russia.1251")) || ispunct((x), std::locale("Russian_Russia.1251")))
-#define END -1
-
 SpellingSetup::SpellingSetup()
 {
   _component = NULL;
@@ -42,7 +35,7 @@ void SpellingSetup::Init(TForm* form, TRichEdit* component)
   _component->OnExit       = OnExitWrapper;
 
   _richspell = new RichEditSpell(_component);
-  _richspell->PerformSpell(Range(0, END));
+  _richspell->PerformSpell(_richspell->ole->GetTextBounds());
   _richspell->FindTextRange(_values.Word.Bounds);
   _values.Word.IsCorrect = _richspell->IsCorrect();
 }
@@ -75,15 +68,26 @@ void __fastcall SpellingSetup::OnKeyDownWrapper(TObject* Sender, WORD& Key, TShi
   if (_handlers.OnKeyDown)
     _handlers.OnKeyDown(Sender, Key, Shift);
 
-  Range selRange = _richspell->ole->SelRange;
+  // TODO: Поддержка Insert
 
-  _values.CursorPos = selRange.Start;
-  _values.CharKey = '\0';
+  if (Key == VK_CONTROL || Key == VK_MENU || Key == VK_SHIFT)
+    return;
+
+  Range selection = _richspell->ole->SelRange;
+
   _values.RawKey = Key;
-  _values.Word.IsCorrect = _richspell->IsCorrect(selRange.Start);
+  _values.CharKey = L'\0';
+  _values.CursorPos = selection.Start;
+  _values.Word.IsCorrect = _richspell->IsCorrect(selection.Start);
 
-  if (selRange.Length())
+  if (selection.Length())
     _richspell->FindTextRange(_values.Word.Bounds);
+
+  if (!_values.Word.IsCorrect && !OnlySelectionChanged(Shift))
+	  _richspell->UnmarkAsMisspell(_values.Word.Bounds);
+
+  //_richspell->ole->SetTextRange(selection.Start);
+  //_richspell->ole->SetTextColor(tomAutoColor);
 
   _component->SelAttributes->Color = (TColor)tomAutoColor;
 }
@@ -93,16 +97,11 @@ void __fastcall SpellingSetup::OnKeyUpWrapper(TObject* Sender, WORD& Key, TShift
   if (_handlers.OnKeyUp)
     _handlers.OnKeyUp(Sender, Key, Shift);
 
-  // Если просто изменилось положение курсора
-	if (   _values.RawKey  == VK_END
-      || _values.RawKey  == VK_HOME
-      || _values.RawKey  == VK_LEFT
-      || _values.RawKey  == VK_RIGHT
-      || (_values.RawKey == VK_UP   && !Shift.Contains(ssCtrl))
-      || (_values.RawKey == VK_DOWN && !Shift.Contains(ssCtrl)))
-  {
+  if (Key == VK_CONTROL || Key == VK_MENU || Key == VK_SHIFT)
+    return;
+
+	if (OnlySelectionChanged(Shift))
     UpdateCurrentWord();
-  }
 }
 
 void __fastcall SpellingSetup::OnKeyPressWrapper(TObject* Sender, wchar_t& Key)
@@ -118,28 +117,49 @@ void __fastcall SpellingSetup::OnChangeWrapper(TObject* Sender)
   if (_handlers.OnChange)
     _handlers.OnChange(Sender);
 
-  // Если изменились только параметры шрифта
   if (_component->Tag == ONCHANGE_BLOCK)
 		return;
 
-
   int posDiff = _richspell->ole->SelRange.Start - _values.CursorPos;
 
-
-
-  Range newWord;
+  // TODO: не искать заново слово, а регулировать границы
+  Range newWord, spellRange;
   _richspell->FindTextRange(newWord);
 
-  if (!_values.Word.IsCorrect)
-	  _richspell->UnmarkAsMisspell(_values.Word.Bounds); // здесь word bounds должны заключать границы старого слова + длину изменения
+  if (_values.Word.Bounds.Length() == 0 && newWord.Length() == 0)
+  {
+    _values.Word.Bounds = newWord;
+    _values.Word.IsCorrect = _richspell->IsCorrect();
+    return;
+  }
+
+  if (posDiff < 0)
+  {
+    spellRange = newWord;
+  }
+  else
+  {
+    spellRange.Start = _values.Word.Bounds.Start;
+    spellRange.End   = newWord.End;
+  }
+
+  //spellRange.Start = std::min(_values.Word.Bounds.Start, newWord.Start);
+  //spellRange.End   = std::max(_values.Word.Bounds.End + posDiff, newWord.End);
+
+  _richspell->UnmarkAsMisspell(spellRange);
+
+  //if (!_values.Word.IsCorrect)
+	//  _richspell->UnmarkAsMisspell(_values.Word.Bounds); // здесь word bounds должны заключать границы старого слова + длину изменения
 
   //_richspell->UnmarkAsMisspell(newWord);
 
   if (ISDELIM(_values.CharKey) || _values.RawKey == VK_RETURN || posDiff > 1)
   {
     //if (posDiff > 1)
-      _values.Word.Bounds.End += posDiff;
-	  _richspell->PerformSpell(_values.Word.Bounds);
+    //  _values.Word.Bounds.End += posDiff;
+
+    _richspell->PerformSpell(spellRange);
+	  //_richspell->PerformSpell(_values.Word.Bounds);
   }
 
   _values.Word.Bounds = newWord;
@@ -221,6 +241,20 @@ void __fastcall SpellingSetup::OnMenuItemClick(TObject* Sender)
   delete range;
 }
 
+bool SpellingSetup::OnlySelectionChanged(TShiftState& shift)
+{
+  return (
+        _values.RawKey == VK_END
+    ||  _values.RawKey == VK_HOME
+    ||  _values.RawKey == VK_LEFT
+    ||  _values.RawKey == VK_RIGHT
+    ||  _values.RawKey == VK_PRIOR
+    ||  _values.RawKey == VK_NEXT
+    || (_values.RawKey == VK_UP   && !shift.Contains(ssCtrl))
+    || (_values.RawKey == VK_DOWN && !shift.Contains(ssCtrl))
+  );
+}
+
 void SpellingSetup::UpdateCurrentWord()
 {
   int newPos = _richspell->ole->SelRange.Start;
@@ -233,8 +267,8 @@ void SpellingSetup::UpdateCurrentWord()
   }
 
   _richspell->FindTextRange(_values.Word.Bounds);
-  _values.CursorPos = newPos;
   _values.RawKey = 0;
   _values.CharKey = L'\0';
+  _values.CursorPos = newPos;
   _values.Word.IsCorrect = _richspell->IsCorrect();
 }

@@ -6,6 +6,7 @@
 
 #include "YandexSpeller.h"
 #include "ORichEdit.h"
+#include "defines.h"
 
 class RichEditSpell
 {
@@ -19,7 +20,7 @@ class RichEditSpell
     int FindWordStart();
     int FindWordEnd();
 
-    bool IsCorrect(int pos = -1);
+    bool IsCorrect(int pos = CURRENT_POS);
     void MarkAsMisspell(Range range);
     void UnmarkAsMisspell(Range range);
     void PerformSpell(Range range);

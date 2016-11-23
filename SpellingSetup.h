@@ -5,11 +5,11 @@
 #include <locale>
 #include "RichEditSpell.h"
 #include "ORichEdit.h"
+#include "defines.h"
 
 struct CurrentWord
 {
   Range  Bounds;
-  Range  NewBounds;
   bool   IsCorrect;
 };
 
@@ -38,7 +38,6 @@ class SpellingSetup
     ~SpellingSetup();
 
     void Init(TForm* form, TRichEdit* component);
-
     void Disable();
 
     void __fastcall OnKeyDownWrapper  (TObject* Sender, WORD&    Key, TShiftState Shift);
@@ -50,6 +49,7 @@ class SpellingSetup
 
     void __fastcall OnMenuItemClick   (TObject* Sender);
 
+    bool OnlySelectionChanged(TShiftState& shift);
     void UpdateCurrentWord();
     
   private:

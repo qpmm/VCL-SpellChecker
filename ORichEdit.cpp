@@ -55,9 +55,6 @@ Range ORichEdit::GetTextRange()
 
 void ORichEdit::SetTextRange(Range range)
 {
-  if (range.Start == 0 && range.End == -1)
-    range.End = GetLength();
-
   _doc->Range(range.Start, range.End, &_range);
 }
 
@@ -91,6 +88,7 @@ std::wstring ORichEdit::GetText()
 //}
 void ORichEdit::SetText(wchar_t* text)
 {
+  // Создается копия, т.к. ПОЧЕМУ-ТО текст вставляется не целиком, если просто передать указатель
   std::wstring stroka = text;
   _range->SetText((wchar_t*)stroka.c_str());
 }
@@ -146,12 +144,17 @@ void ORichEdit::SetTextColor(int color)
   _range->SetFont(_style);
 }
 
-int ORichEdit::GetLength()
+Range ORichEdit::GetTextBounds()
 {
   long length;
 
   _doc->GetSelection(&_sel);
   _sel->GetStoryLength(&length);
 
-  return length;
+  return Range(0, length);
+}
+
+std::wstring ORichEdit::GetFullText()
+{
+  return GetTextFromRange(GetTextBounds());
 }
