@@ -26,6 +26,7 @@ void SpellingSetup::Init(TForm* form, TRichEdit* component)
   _handlers.OnChange     = _component->OnChange;
   _handlers.OnMouseDown  = _component->OnMouseDown;
   _handlers.OnExit       = _component->OnExit;
+  //_handlers.OnResizeRequest = _component->OnResizeRequest;
 
   _component->OnKeyDown    = OnKeyDownWrapper;
   _component->OnKeyUp      = OnKeyUpWrapper;
@@ -33,6 +34,7 @@ void SpellingSetup::Init(TForm* form, TRichEdit* component)
   _component->OnChange     = OnChangeWrapper;
   _component->OnMouseDown  = OnMouseDownWrapper;
   _component->OnExit       = OnExitWrapper;
+  //_component->OnResizeRequest = OnResizeRequestWrapper;
 
   _richspell = new RichEditSpell(_component);
   _richspell->PerformSpell(_richspell->ole->GetTextBounds());
@@ -56,10 +58,24 @@ void SpellingSetup::Disable()
     _component->OnChange     = _handlers.OnChange;
     _component->OnMouseDown  = _handlers.OnMouseDown;
     _component->OnExit       = _handlers.OnExit;
+    //_component->OnResizeRequest = _handlers.OnResizeRequest;
 
     delete _component->PopupMenu;
     _component->PopupMenu = NULL;
     _component = NULL;
+  }
+}
+
+void SpellingSetup::SafeActivate(TForm* form, TRichEdit* component)
+{
+  try
+  {
+    Init(form, component);
+  }
+  catch (...)
+  {
+    MessageBox(form, "Не удалось запустить модуль проверки орфографии.", "Уведомление", MB_OK | MB_ICONWARNING);
+    Disable();
   }
 }
 
@@ -272,3 +288,11 @@ void SpellingSetup::UpdateCurrentWord()
   _values.CursorPos = newPos;
   _values.Word.IsCorrect = _richspell->IsCorrect();
 }
+
+//void __fastcall SpellingSetup::OnResizeRequestWrapper(TObject* Sender, TRect& Rect)
+//{
+//  if (_handlers.OnResizeRequest)
+//    _handlers.OnResizeRequest(Sender, Rect);
+//
+//  _component->Repaint();
+//}

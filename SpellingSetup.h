@@ -29,6 +29,7 @@ struct EventHandlers
   TNotifyEvent      OnChange;
   TMouseEvent       OnMouseDown;
   TNotifyEvent      OnExit;
+  //TRichEditResizeEvent      OnResizeRequest;
 };
 
 class SpellingSetup
@@ -40,12 +41,16 @@ class SpellingSetup
     void Init(TForm* form, TRichEdit* component);
     void Disable();
 
+    void SafeActivate(TForm* form, TRichEdit* component);
+
     void __fastcall OnKeyDownWrapper  (TObject* Sender, WORD&    Key, TShiftState Shift);
     void __fastcall OnKeyUpWrapper    (TObject* Sender, WORD&    Key, TShiftState Shift);
     void __fastcall OnKeyPressWrapper (TObject* Sender, wchar_t& Key);
     void __fastcall OnChangeWrapper   (TObject* Sender);
     void __fastcall OnMouseDownWrapper(TObject* Sender, TMouseButton Button, TShiftState Shift, int X, int Y);
     void __fastcall OnExitWrapper     (TObject* Sender);
+
+    //void __fastcall OnResizeRequestWrapper(TObject* Sender, TRect& Rect);
 
     void __fastcall OnMenuItemClick   (TObject* Sender);
 
