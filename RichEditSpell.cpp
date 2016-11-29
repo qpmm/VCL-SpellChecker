@@ -14,22 +14,6 @@ RichEditSpell::~RichEditSpell()
 void RichEditSpell::FindTextRange(Range& range)
 {
   range = FindTextRange(ole->SelRange.Start);
-
-//  int s = range.Start = range.End = ole->SelRange.Start;
-//
-//  bool delimToLeft  = _component->Perform(EM_FINDWORDBREAK, WB_ISDELIMITER, s - 1);
-//  bool delimToRight = _component->Perform(EM_FINDWORDBREAK, WB_ISDELIMITER, s);
-//
-//  if (!delimToLeft)
-//  {
-//    range.Start = _component->Perform(EM_FINDWORDBREAK, WB_LEFT, s);
-//  }
-//
-//  if (!delimToRight)
-//  {
-//    s = _component->Perform(EM_FINDWORDBREAK, WB_RIGHT, s);
-//    range.End = _component->Perform(EM_FINDWORDBREAK, WB_LEFT, s);
-//  }
 }
 
 Range RichEditSpell::FindTextRange(int pos)
@@ -46,17 +30,6 @@ Range RichEditSpell::FindTextRange(int pos)
   return Range(start, end);
 }
 
-int RichEditSpell::FindWordStart()
-{
-  //_component->Perform(EM_FINDWORDBREAK, WB_LEFT, _component->SelStart);
-  return 0;
-}
-
-int RichEditSpell::FindWordEnd()
-{
-  return 0;
-}
-
 bool RichEditSpell::IsCorrect(int pos)
 {
   if (pos != CURRENT_POS)
@@ -70,18 +43,18 @@ bool RichEditSpell::IsCorrect(int pos)
 
 void RichEditSpell::MarkAsMisspell(Range range)
 {
-  _component->Tag = ONCHANGE_BLOCK;
+  OnChangeBlocked = true;
   ole->TextRange = range;
   ole->SetTextColor(clRed);
-  _component->Tag = ONCHANGE_ALLOW;
+  OnChangeBlocked = false;
 }
 
 void RichEditSpell::UnmarkAsMisspell(Range range)
 {
-  _component->Tag = ONCHANGE_BLOCK;
+  OnChangeBlocked = true;
   ole->TextRange = range;
   ole->SetTextColor(tomAutoColor);
-  _component->Tag = ONCHANGE_ALLOW;
+  OnChangeBlocked = false;
 }
 
 void RichEditSpell::PerformSpell(Range range)

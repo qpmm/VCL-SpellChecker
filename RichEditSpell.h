@@ -17,9 +17,6 @@ class RichEditSpell
     void  FindTextRange(Range& range);
     Range FindTextRange(int pos);
 
-    int FindWordStart();
-    int FindWordEnd();
-
     bool IsCorrect(int pos = CURRENT_POS);
     void MarkAsMisspell(Range range);
     void UnmarkAsMisspell(Range range);

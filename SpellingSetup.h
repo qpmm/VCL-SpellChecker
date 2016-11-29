@@ -29,7 +29,6 @@ struct EventHandlers
   TNotifyEvent      OnChange;
   TMouseEvent       OnMouseDown;
   TNotifyEvent      OnExit;
-  //TRichEditResizeEvent      OnResizeRequest;
 };
 
 class SpellingSetup
@@ -50,10 +49,9 @@ class SpellingSetup
     void __fastcall OnMouseDownWrapper(TObject* Sender, TMouseButton Button, TShiftState Shift, int X, int Y);
     void __fastcall OnExitWrapper     (TObject* Sender);
 
-    //void __fastcall OnResizeRequestWrapper(TObject* Sender, TRect& Rect);
-
     void __fastcall OnMenuItemClick   (TObject* Sender);
 
+    void CreateContextMenu(Range& word, std::vector<std::wstring>& suggs);
     bool OnlySelectionChanged(TShiftState& shift);
     void UpdateCurrentWord();
     

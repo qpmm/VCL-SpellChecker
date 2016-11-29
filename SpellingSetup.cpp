@@ -1,11 +1,14 @@
 #include "SpellingSetup.h"
 
+bool OnChangeBlocked;
+
 SpellingSetup::SpellingSetup()
 {
+  _mainform  = NULL;
   _component = NULL;
   _richspell = NULL;
   memset(&_handlers, 0, sizeof(_handlers));
-  memset(&_values,  0, sizeof(_values));
+  memset(&_values,   0, sizeof(_values));
 }
 
 SpellingSetup::~SpellingSetup()
@@ -26,7 +29,6 @@ void SpellingSetup::Init(TForm* form, TRichEdit* component)
   _handlers.OnChange     = _component->OnChange;
   _handlers.OnMouseDown  = _component->OnMouseDown;
   _handlers.OnExit       = _component->OnExit;
-  //_handlers.OnResizeRequest = _component->OnResizeRequest;
 
   _component->OnKeyDown    = OnKeyDownWrapper;
   _component->OnKeyUp      = OnKeyUpWrapper;
@@ -34,16 +36,19 @@ void SpellingSetup::Init(TForm* form, TRichEdit* component)
   _component->OnChange     = OnChangeWrapper;
   _component->OnMouseDown  = OnMouseDownWrapper;
   _component->OnExit       = OnExitWrapper;
-  //_component->OnResizeRequest = OnResizeRequestWrapper;
 
   _richspell = new RichEditSpell(_component);
   _richspell->PerformSpell(_richspell->ole->GetTextBounds());
   _richspell->FindTextRange(_values.Word.Bounds);
   _values.Word.IsCorrect = _richspell->IsCorrect();
+
+  OnChangeBlocked = false;
 }
 
 void SpellingSetup::Disable()
 {
+  _mainform = NULL;
+
   if (_richspell)
   {
     delete _richspell;
@@ -58,7 +63,6 @@ void SpellingSetup::Disable()
     _component->OnChange     = _handlers.OnChange;
     _component->OnMouseDown  = _handlers.OnMouseDown;
     _component->OnExit       = _handlers.OnExit;
-    //_component->OnResizeRequest = _handlers.OnResizeRequest;
 
     delete _component->PopupMenu;
     _component->PopupMenu = NULL;
@@ -74,7 +78,7 @@ void SpellingSetup::SafeActivate(TForm* form, TRichEdit* component)
   }
   catch (...)
   {
-    MessageBox(form, "Не удалось запустить модуль проверки орфографии.", "Уведомление", MB_OK | MB_ICONWARNING);
+    MessageBox(form->Handle, "Не удалось запустить модуль проверки орфографии.", "Уведомление", MB_OK | MB_ICONWARNING);
     Disable();
   }
 }
@@ -83,8 +87,6 @@ void __fastcall SpellingSetup::OnKeyDownWrapper(TObject* Sender, WORD& Key, TShi
 {
   if (_handlers.OnKeyDown)
     _handlers.OnKeyDown(Sender, Key, Shift);
-
-  // TODO: Поддержка Insert
 
   if (Key == VK_CONTROL || Key == VK_MENU || Key == VK_SHIFT)
     return;
@@ -102,10 +104,9 @@ void __fastcall SpellingSetup::OnKeyDownWrapper(TObject* Sender, WORD& Key, TShi
   if (!_values.Word.IsCorrect && !OnlySelectionChanged(Shift))
 	  _richspell->UnmarkAsMisspell(_values.Word.Bounds);
 
-  //_richspell->ole->SetTextRange(selection.Start);
-  //_richspell->ole->SetTextColor(tomAutoColor);
-
+  OnChangeBlocked = true;
   _component->SelAttributes->Color = (TColor)tomAutoColor;
+  OnChangeBlocked = false;
 }
 
 void __fastcall SpellingSetup::OnKeyUpWrapper(TObject* Sender, WORD& Key, TShiftState Shift)
@@ -133,12 +134,11 @@ void __fastcall SpellingSetup::OnChangeWrapper(TObject* Sender)
   if (_handlers.OnChange)
     _handlers.OnChange(Sender);
 
-  if (_component->Tag == ONCHANGE_BLOCK)
+  if (OnChangeBlocked || _values.RawKey == 0)
 		return;
 
   int posDiff = _richspell->ole->SelRange.Start - _values.CursorPos;
 
-  // TODO: не искать заново слово, а регулировать границы
   Range newWord, spellRange;
   _richspell->FindTextRange(newWord);
 
@@ -159,27 +159,15 @@ void __fastcall SpellingSetup::OnChangeWrapper(TObject* Sender)
     spellRange.End   = newWord.End;
   }
 
-  //spellRange.Start = std::min(_values.Word.Bounds.Start, newWord.Start);
-  //spellRange.End   = std::max(_values.Word.Bounds.End + posDiff, newWord.End);
-
   _richspell->UnmarkAsMisspell(spellRange);
 
-  //if (!_values.Word.IsCorrect)
-	//  _richspell->UnmarkAsMisspell(_values.Word.Bounds); // здесь word bounds должны заключать границы старого слова + длину изменения
-
-  //_richspell->UnmarkAsMisspell(newWord);
-
   if (ISDELIM(_values.CharKey) || _values.RawKey == VK_RETURN || posDiff > 1)
-  {
-    //if (posDiff > 1)
-    //  _values.Word.Bounds.End += posDiff;
-
     _richspell->PerformSpell(spellRange);
-	  //_richspell->PerformSpell(_values.Word.Bounds);
-  }
 
   _values.Word.Bounds = newWord;
   _values.Word.IsCorrect = _richspell->IsCorrect();
+  _values.RawKey = 0;
+  _values.CharKey = L'\0';
 }
 
 void __fastcall SpellingSetup::OnMouseDownWrapper(TObject* Sender, TMouseButton Button, TShiftState Shift, int X, int Y)
@@ -193,8 +181,6 @@ void __fastcall SpellingSetup::OnMouseDownWrapper(TObject* Sender, TMouseButton 
     return;
   }
 
-  //_richspell->ole->SelRange = Range(cursorPos, cursorPos);
-
   if (Button == mbRight)
   {
     int cursorPos = _component->Perform(EM_CHARFROMPOS, 0, (int)&TPoint(X, Y));
@@ -206,33 +192,40 @@ void __fastcall SpellingSetup::OnMouseDownWrapper(TObject* Sender, TMouseButton 
     _richspell->PerformSpell(selWord);
 
     std::vector<std::wstring>& suggs = _richspell->GetSuggestions(selWord.Start);
-    _component->PopupMenu->Items->Clear();
-
-    if (suggs.size())
-    {
-      for (unsigned i = 0; i < suggs.size(); ++i)
-      {
-        TMenuItem* item = new TMenuItem(_component->PopupMenu);
-
-        item->Caption = suggs[i].c_str();
-        item->Tag = (int)(new Range(selWord.Start, selWord.End));
-        item->OnClick = OnMenuItemClick;
-
-        _component->PopupMenu->Items->Add(item);
-      }
-    }
-    else
-    {
-      TMenuItem* item = new TMenuItem(_component->PopupMenu);
-
-      item->Caption = L"Варианты отсутствуют";
-      item->Enabled = false;
-
-      _component->PopupMenu->Items->Add(item);
-    }
+    CreateContextMenu(selWord, suggs);
 
     TPoint point = _component->ClientToScreen(TPoint(X, Y));
     _component->PopupMenu->Popup(point.X, point.Y);
+  }
+}
+
+void SpellingSetup::CreateContextMenu(Range& word, std::vector<std::wstring>& suggs)
+{
+  TMenuItem* item;
+
+  _component->PopupMenu->Items->Clear();
+
+  if (suggs.size() != 0)
+  {
+    for (unsigned i = 0; i < suggs.size(); ++i)
+    {
+      item = new TMenuItem(_component->PopupMenu);
+
+      item->Caption = suggs[i].c_str();
+      item->Tag = (int)(new Range(word.Start, word.End));
+      item->OnClick = OnMenuItemClick;
+
+      _component->PopupMenu->Items->Add(item);
+    }
+  }
+  else
+  {
+    item = new TMenuItem(_component->PopupMenu);
+
+    item->Caption = L"Варианты отсутствуют";
+    item->Enabled = false;
+
+    _component->PopupMenu->Items->Add(item);
   }
 }
 
@@ -249,10 +242,10 @@ void __fastcall SpellingSetup::OnMenuItemClick(TObject* Sender)
   TMenuItem* item = (TMenuItem*)Sender;
   Range* range = (Range*)item->Tag;
 
-  _component->Tag = ONCHANGE_BLOCK;
+  OnChangeBlocked = true;
   _richspell->UnmarkAsMisspell(*range);
   _richspell->ole->SetTextInRange(*range, item->Caption.c_str());
-  _component->Tag = ONCHANGE_ALLOW;
+  OnChangeBlocked = false;
 
   delete range;
 }
@@ -283,16 +276,7 @@ void SpellingSetup::UpdateCurrentWord()
   }
 
   _richspell->FindTextRange(_values.Word.Bounds);
-  _values.RawKey = 0;
-  _values.CharKey = L'\0';
   _values.CursorPos = newPos;
   _values.Word.IsCorrect = _richspell->IsCorrect();
 }
 
-//void __fastcall SpellingSetup::OnResizeRequestWrapper(TObject* Sender, TRect& Rect)
-//{
-//  if (_handlers.OnResizeRequest)
-//    _handlers.OnResizeRequest(Sender, Rect);
-//
-//  _component->Repaint();
-//}

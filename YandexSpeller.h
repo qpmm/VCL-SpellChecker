@@ -32,10 +32,10 @@ class YandexSpeller
     std::vector<ResponseObject> Result;
     
   private:
-    TIdHTTP*        _http_module;
+    TIdHTTP*        _httpModule;
     TStringStream*  _buffer;
-    std::wstring    _url_template;
-    int             _url_len;
+    std::wstring    _urlTemplate;
+    int             _urlLen;
 };
 
 #endif

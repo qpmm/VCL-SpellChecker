@@ -2,26 +2,26 @@
 
 YandexSpeller::YandexSpeller()
 {
-  _http_module = new TIdHTTP(NULL);
-  _url_template.reserve(4096);
-  _url_template = L"http://speller.yandex.net/services/spellservice.json/checkText?text=";
-  _url_len = _url_template.length();
+  _httpModule = new TIdHTTP(NULL);
+  _urlTemplate.reserve(4096);
+  _urlTemplate = L"http://speller.yandex.net/services/spellservice.json/checkText?text=";
+  _urlLen = _urlTemplate.length();
   _buffer = new TStringStream;
 }
 
 YandexSpeller::~YandexSpeller()
 {
-  delete _http_module;
+  delete _httpModule;
   delete _buffer;
 }
 
 TJSONArray* YandexSpeller::MakeRequest(std::wstring Content)
 {
   _buffer->Clear();
-  _url_template.append(Content);
-  _http_module->Get(TIdURI::URLEncode(_url_template.c_str()), _buffer);
-  _http_module->Disconnect();
-  _url_template.resize(_url_len);
+  _urlTemplate.append(Content);
+  _httpModule->Get(TIdURI::URLEncode(_urlTemplate.c_str()), _buffer);
+  _httpModule->Disconnect();
+  _urlTemplate.resize(_urlLen);
 
   return (TJSONArray*)(TJSONObject::ParseJSONValue(_buffer->DataString));
 }
