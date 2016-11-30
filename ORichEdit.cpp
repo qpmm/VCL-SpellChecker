@@ -67,7 +67,7 @@ std::wstring ORichEdit::GetSelText()
 //void ORichEdit::SetSelText(std::wstring text)
 //{
 //  SetSelText(text.c_str());
-//}
+//}
 
 void ORichEdit::SetSelText(wchar_t* text)
 {
@@ -85,7 +85,8 @@ std::wstring ORichEdit::GetText()
 //void ORichEdit::SetText(std::wstring text)
 //{
 //  SetText(text.c_str());
-//}
+//}
+
 void ORichEdit::SetText(wchar_t* text)
 {
   // Создается копия, т.к. ПОЧЕМУ-ТО текст вставляется не целиком, если просто передать указатель
@@ -102,7 +103,8 @@ std::wstring ORichEdit::GetTextFromRange(Range range)
 //void ORichEdit::SetTextInRange(Range range, std::wstring text)
 //{
 //  SetTextInRange(range, text.c_str());
-//}
+//}
+
 void ORichEdit::SetTextInRange(Range range, wchar_t* text)
 {
   SetTextRange(range);

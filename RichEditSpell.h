@@ -1,4 +1,4 @@
-﻿#ifndef RichEditSpellH
+#ifndef RichEditSpellH
 #define RichEditSpellH
 
 #include <vcl.h>

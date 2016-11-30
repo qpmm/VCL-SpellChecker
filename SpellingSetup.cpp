@@ -72,14 +72,17 @@ void SpellingSetup::Disable()
 
 void SpellingSetup::SafeActivate(TForm* form, TRichEdit* component)
 {
-  try
+  if (_richspell == NULL)
   {
-    Init(form, component);
-  }
-  catch (...)
-  {
-    MessageBox(form->Handle, "Не удалось запустить модуль проверки орфографии.", "Уведомление", MB_OK | MB_ICONWARNING);
-    Disable();
+    try
+    {
+      Init(form, component);
+    }
+    catch (...)
+    {
+      MessageBoxW(form->Handle, L"Не удалось запустить модуль проверки орфографии.", L"Уведомление", MB_OK | MB_ICONWARNING);
+      Disable();
+    }
   }
 }
 
@@ -88,7 +91,7 @@ void __fastcall SpellingSetup::OnKeyDownWrapper(TObject* Sender, WORD& Key, TShi
   if (_handlers.OnKeyDown)
     _handlers.OnKeyDown(Sender, Key, Shift);
 
-  if (Key == VK_CONTROL || Key == VK_MENU || Key == VK_SHIFT)
+  if (Key == VK_CONTROL || Key == VK_MENU || Key == VK_SHIFT || Key == VK_ESCAPE)
     return;
 
   Range selection = _richspell->ole->SelRange;
@@ -142,12 +145,12 @@ void __fastcall SpellingSetup::OnChangeWrapper(TObject* Sender)
   Range newWord, spellRange;
   _richspell->FindTextRange(newWord);
 
-  if (_values.Word.Bounds.Length() == 0 && newWord.Length() == 0)
-  {
-    _values.Word.Bounds = newWord;
-    _values.Word.IsCorrect = _richspell->IsCorrect();
-    return;
-  }
+//  if (_values.Word.Bounds.Length() == 0 && newWord.Length() == 0 && posDiff < 2)
+//  {
+//    _values.Word.Bounds = newWord;
+//    _values.Word.IsCorrect = _richspell->IsCorrect();
+//    return;
+//  }
 
   if (posDiff < 0)
   {
@@ -159,7 +162,8 @@ void __fastcall SpellingSetup::OnChangeWrapper(TObject* Sender)
     spellRange.End   = newWord.End;
   }
 
-  _richspell->UnmarkAsMisspell(spellRange);
+  if (_values.Word.Bounds.Length() != 0)
+    _richspell->UnmarkAsMisspell(spellRange);
 
   if (ISDELIM(_values.CharKey) || _values.RawKey == VK_RETURN || posDiff > 1)
     _richspell->PerformSpell(spellRange);
@@ -279,4 +283,3 @@ void SpellingSetup::UpdateCurrentWord()
   _values.CursorPos = newPos;
   _values.Word.IsCorrect = _richspell->IsCorrect();
 }
-

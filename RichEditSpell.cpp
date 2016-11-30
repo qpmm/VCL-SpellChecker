@@ -1,4 +1,4 @@
-﻿#include "RichEditSpell.h"
+#include "RichEditSpell.h"
 
 RichEditSpell::RichEditSpell(TRichEdit* component)
 {
