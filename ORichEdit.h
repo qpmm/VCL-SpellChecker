@@ -5,13 +5,15 @@
 #include <richole.h>
 #include <tom.h>
 #include <string>
-#include "defines.h"
 
 class Range
 {
   public:
     Range();
     Range(long start, long end);
+    
+    int  ToInt();
+    static Range FromInt(int src);
 
     long Length();
 
@@ -30,22 +32,19 @@ class ORichEdit
     __property Range Text = {read = GetText, write = SetText};
 
     Range        GetSelRange();
-    void         SetSelRange(Range range);
+    void         SetSelRange(Range r);
 
     Range        GetTextRange();
-    void         SetTextRange(Range range);
+    void         SetTextRange(Range r);
 
     std::wstring GetSelText();
-    //void         SetSelText(std::wstring text);
     void         SetSelText(wchar_t* text);
 
     std::wstring GetText();
-    //void         SetText(std::wstring text);
     void         SetText(wchar_t* text);
 
-    std::wstring GetTextFromRange(Range range);
-    //void         SetTextInRange(Range range, std::wstring text);
-    void         SetTextInRange(Range range, wchar_t* text);
+    std::wstring GetTextFromRange(Range r);
+    void         SetTextInRange(Range r, wchar_t* text);
 
     int          GetSelColor();
     int          GetTextColor();
@@ -55,10 +54,10 @@ class ORichEdit
     std::wstring GetFullText();
 
   private:
-    ITextDocument*   _doc;
-    ITextSelection*  _sel;
-    ITextRange*      _range;
-    ITextFont*       _style;
+    ITextDocument*   doc;
+    ITextSelection*  sel;
+    ITextRange*      range;
+    ITextFont*       style;
 };
 
 #endif

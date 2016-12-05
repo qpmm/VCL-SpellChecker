@@ -8,10 +8,30 @@
 #include "ORichEdit.h"
 #include "defines.h"
 
+class ContextMenu
+{
+  public:
+    ContextMenu();
+    ~ContextMenu();
+
+    void Create(TPopupMenu* menu, DynamicArray<UnicodeString>& suggs);
+    void __fastcall OnMenuItemClick(TObject* Sender);
+
+    void __fastcall Undo(TObject* Sender);
+    void __fastcall Cut(TObject* Sender);
+    void __fastcall Copy(TObject* Sender);
+    void __fastcall Paste(TObject* Sender);
+    void __fastcall Delete(TObject* Sender);
+    void __fastcall SelectAll(TObject* Sender);
+
+  private:
+    TMenuItem* _defaults[6];
+};
+
 class RichEditSpell
 {
   public:
-    RichEditSpell(TRichEdit* Component);
+    RichEditSpell(TRichEdit* edit);
     ~RichEditSpell();
 
     void  FindTextRange(Range& range);
@@ -27,8 +47,8 @@ class RichEditSpell
     ORichEdit* ole;
 
   private:
-    TRichEdit*     _component;
-	  YandexSpeller  _speller;
+    TRichEdit*     component;
+	  YandexSpeller  speller;
 };
 
 #endif

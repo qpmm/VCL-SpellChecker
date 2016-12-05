@@ -23,19 +23,17 @@ class YandexSpeller
     YandexSpeller();
     ~YandexSpeller();
   
-    TJSONArray* MakeRequest(std::wstring Content);
-    void ParseJSON(TJSONArray* Content);
-    void CheckText(std::wstring Text);
-    bool CheckWord(std::wstring Word);
-    void Clear();
+    TJSONArray* MakeRequest(std::wstring content);
+    void ParseJSON(TJSONArray* content);
+    void CheckText(std::wstring text);
 
     std::vector<ResponseObject> Result;
     
   private:
-    TIdHTTP*        _httpModule;
-    TStringStream*  _buffer;
-    std::wstring    _urlTemplate;
-    int             _urlLen;
+    TIdHTTP*        httpModule;
+    TStringStream*  buffer;
+    std::wstring    urlTemplate;
+    int             urlLength;
 };
 
 #endif

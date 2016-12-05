@@ -2,58 +2,48 @@
 
 YandexSpeller::YandexSpeller()
 {
-  _httpModule = new TIdHTTP(NULL);
-  _urlTemplate.reserve(4096);
-  _urlTemplate = L"http://speller.yandex.net/services/spellservice.json/checkText?text=";
-  _urlLen = _urlTemplate.length();
-  _buffer = new TStringStream;
+  httpModule = new TIdHTTP(NULL);
+  urlTemplate.reserve(4096);
+  urlTemplate = L"http://speller.yandex.net/services/spellservice.json/checkText?text=";
+  urlLength = urlTemplate.length();
+  buffer = new TStringStream;
 }
 
 YandexSpeller::~YandexSpeller()
 {
-  delete _httpModule;
-  delete _buffer;
+  delete httpModule;
+  delete buffer;
 }
 
-TJSONArray* YandexSpeller::MakeRequest(std::wstring Content)
+TJSONArray* YandexSpeller::MakeRequest(std::wstring content)
 {
-  _buffer->Clear();
-  _urlTemplate.append(Content);
-  _httpModule->Get(TIdURI::URLEncode(_urlTemplate.c_str()), _buffer);
-  _httpModule->Disconnect();
-  _urlTemplate.resize(_urlLen);
+  buffer->Clear();
+  urlTemplate.append(content);
+  httpModule->Get(TIdURI::URLEncode(urlTemplate.c_str()), buffer);
+  httpModule->Disconnect();
+  urlTemplate.resize(urlLength);
 
-  return (TJSONArray*)(TJSONObject::ParseJSONValue(_buffer->DataString));
+  return (TJSONArray*)(TJSONObject::ParseJSONValue(buffer->DataString));
 }
 
-void YandexSpeller::CheckText(std::wstring Text)
+void YandexSpeller::CheckText(std::wstring text)
 {
-  ParseJSON(MakeRequest(Text));
+  ParseJSON(MakeRequest(text));
 }
 
-bool YandexSpeller::CheckWord(std::wstring Word)
+void YandexSpeller::ParseJSON(TJSONArray* content)
 {
-  return (MakeRequest(Word)->Size() == 0);
-}
-
-void YandexSpeller::Clear()
-{
-  Result.clear();
-}
-
-void YandexSpeller::ParseJSON(TJSONArray* Content)
-{
-  if (Content->Size() == 0)
+  if (content->Size() == 0)
   {
     Result.clear();
     return;
   }
 
-  Result.resize(Content->Size());
+  Result.resize(content->Size());
   
   for (unsigned i = 0; i < Result.size(); ++i)
   {
-    TJSONObject* item = (TJSONObject*)(Content->Get(i));
+    TJSONObject* item = (TJSONObject*)(content->Get(i));
 
     Result[i].code = ((TJSONNumber*)(item->Get(0)->JsonValue))->AsInt; // code
     Result[i].pos  = ((TJSONNumber*)(item->Get(1)->JsonValue))->AsInt; // pos
