@@ -1,191 +1,224 @@
 #include "RichEditSpell.h"
 
-ContextMenu::ContextMenu(YandexSpeller* speller)
+#include <locale>
+//#include <Clipbrd.hpp>
+
+CustomContextMenu::CustomContextMenu(RichEditSpell* Owner)
 {
-  _speller = speller;
+  owner = Owner;
+  owner->component->PopupMenu = new TPopupMenu(owner->component);
+  popupmenu = owner->component->PopupMenu;
+  popupmenu->AutoPopup = false;
 
-  for (int i = 0; i < 6; ++i)
-    _defaults[i] = new TMenuItem(_owner->_component->PopupMenu);
+  for (int i = 0; i < 5; ++i)
+    defaults[i] = new TMenuItem(popupmenu);
 
-  _defaults[0]->Caption = "РћС‚РјРµРЅРёС‚СЊ";
-  _defaults[1]->Caption = "Р’С‹СЂРµР·Р°С‚СЊ";
-  _defaults[2]->Caption = "РљРѕРїРёСЂРѕРІР°С‚СЊ";
-  _defaults[3]->Caption = "Р’СЃС‚Р°РІРёС‚СЊ";
-  _defaults[4]->Caption = "РЈРґР°Р»РёС‚СЊ";
-  _defaults[5]->Caption = "Р’С‹РґРµР»РёС‚СЊ РІСЃРµ";
+  defaults[0]->Caption = "Вырезать";
+  defaults[1]->Caption = "Копировать";
+  defaults[2]->Caption = "Вставить";
+  defaults[3]->Caption = "Удалить";
+  defaults[4]->Caption = "Выделить все";
 
-  _defaults[0]->OnClick = Undo;
-  _defaults[1]->OnClick = Cut;
-  _defaults[2]->OnClick = Copy;
-  _defaults[3]->OnClick = Paste;
-  _defaults[4]->OnClick = Delete;
-  _defaults[5]->OnClick = SelectAll;
+  defaults[0]->OnClick = Cut;
+  defaults[1]->OnClick = Copy;
+  defaults[2]->OnClick = Paste;
+  defaults[3]->OnClick = Delete;
+  defaults[4]->OnClick = SelectAll;
 }
 
-ContextMenu::~ContextMenu()
+CustomContextMenu::~CustomContextMenu()
 {
-  for (int i = 0; i < 6; ++i)
-    delete _defaults[i];
+  // Удалит все элементы и освободит их память
+  // Т.е. освобождать defaults не требуется
+  popupmenu->Items->Clear();
+
+  delete popupmenu;
+  owner->component->PopupMenu = NULL;
 }
 
-void ContextMenu::Create(Range& word)
+void CustomContextMenu::Create(NumRange Word, bool hasSuggestions, bool selLen)
 {
   TMenuItem* item;
 
-  _owner->_component->PopupMenu->Items->Clear();
-  _owner->_component->PopupMenu->Tag = word.ToInt();
+  popupmenu->Tag = Word.ToInt();
+  RemoveAllItems();
 
-  if (_owner->_speller.Result.Length != 0)
+  if (hasSuggestions)
   {
-    DynamicArray<UnicodeString>& suggs = _owner->_speller.Result[0].s;
+    DynamicArray<UnicodeString>& sugs = owner->speller.Result[0].s;
 
-    if (suggs.Length == 0)
+    if (sugs.Length)
     {
-      item = new TMenuItem(_owner->_component->PopupMenu);
+      for (int i = 0; i < sugs.Length; ++i)
+      {
+        item = new TMenuItem(popupmenu);
 
-      item->Caption = L"Р’Р°СЂРёР°РЅС‚С‹ РѕС‚СЃСѓС‚СЃС‚РІСѓСЋС‚";
+        item->Caption = sugs[i];
+        item->OnClick = OnMenuItemClick;
+
+        popupmenu->Items->Add(item);
+      }
+    }
+    else
+    {
+      item = new TMenuItem(popupmenu);
+
+      item->Caption = L"Варианты отсутствуют";
       item->Enabled = false;
 
-      _owner->_component->PopupMenu->Items->Add(item);
+      popupmenu->Items->Add(item);
     }
 
-    for (int i = 0; i < suggs.Length; ++i)
-    {
-      item = new TMenuItem(_owner->_component->PopupMenu);
-
-      item->Caption = suggs[i];
-      item->OnClick = OnMenuItemClick;
-
-      _owner->_component->PopupMenu->Items->Add(item);
-    }
-
-    _owner->_component->PopupMenu->Items->InsertNewLineAfter(item);
+    popupmenu->Items->InsertNewLineAfter(item);
   }
 
-  for (int i = 0; i < 6; ++i)
+  for (int i = 0; i < 5; ++i)
   {
-    item = _defaults[i];
-    _owner->_component->PopupMenu->Items->Add(item);
+    item = defaults[i];
 
-    if (i == 0 || i == 4)
-      _owner->_component->PopupMenu->Items->InsertNewLineAfter(item);
+    if (i == 0 || i == 1 || i == 3)
+    {
+      if (selLen == true)
+        item->Enabled = true;
+      else
+        item->Enabled = false;
+    }
+
+    popupmenu->Items->Add(item);
+
+    if (i == 3)
+      popupmenu->Items->InsertNewLineAfter(item);
   }
 }
 
-void __fastcall ContextMenu::OnMenuItemClick(TObject* Sender)
+void CustomContextMenu::Show(int X, int Y)
+{
+  TPoint coord = owner->component->ClientToScreen(TPoint(X, Y));
+  popupmenu->Popup(coord.X, coord.Y);
+}
+
+void CustomContextMenu::RemoveAllItems()
+{
+  for (TMenuItem* item; popupmenu->Items->Count != 0; )
+  {
+    item = popupmenu->Items->Items[0];
+
+    popupmenu->Items->Remove(item);
+    if (item->OnClick == OnMenuItemClick)
+      delete item;
+  }
+}
+
+void __fastcall CustomContextMenu::OnMenuItemClick(TObject* Sender)
 {
   TMenuItem* item = (TMenuItem*)Sender;
-  Range range = Range::FromInt(item->Owner->Tag);
+  NumRange word = NumRange::FromInt(item->Owner->Tag);
 
-  item->Owner->Tag = 0;
   OnChangeBlocked = true;
-  _owner->UnmarkAsMisspell(range);
-  _owner->ole->SetTextInRange(range, item->Caption.c_str());
+  owner->UnmarkAsMisspell(word);
+  owner->Ole->SetTextInRange(word, item->Caption.c_str());
   OnChangeBlocked = false;
 }
 
-void __fastcall ContextMenu::Undo(TObject* Sender)
+void __fastcall CustomContextMenu::Cut(TObject* Sender)
 {
-  _owner->_component->Undo();
+  owner->component->CutToClipboard();
 }
 
-void __fastcall ContextMenu::Cut(TObject* Sender)
+void __fastcall CustomContextMenu::Copy(TObject* Sender)
 {
-  _owner->_component->CutToClipboard();
+  owner->component->CopyToClipboard();
 }
 
-void __fastcall ContextMenu::Copy(TObject* Sender)
+void __fastcall CustomContextMenu::Paste(TObject* Sender)
 {
-  _owner->_component->CopyToClipboard();
+  owner->component->PasteFromClipboard();
+  //owner->component->SelText = Clipboard()->AsText;
 }
 
-void __fastcall ContextMenu::Paste(TObject* Sender)
+void __fastcall CustomContextMenu::Delete(TObject* Sender)
 {
-  _owner->_component->PasteFromClipboard();
+  owner->component->ClearSelection();
 }
 
-void __fastcall ContextMenu::Delete(TObject* Sender)
+void __fastcall CustomContextMenu::SelectAll(TObject* Sender)
 {
-  _owner->_component->ClearSelection();
+  owner->component->SelectAll();
 }
 
-void __fastcall ContextMenu::SelectAll(TObject* Sender)
+RichEditSpell::RichEditSpell(TRichEdit* Component)
 {
-  _owner->_component->SelectAll();
-}
-
-RichEditSpell::RichEditSpell(TRichEdit* edit)
-{
-  component = edit;
-  ole = new ORichEdit(component);
+  component = Component;
+  ContextMenu = new CustomContextMenu(this);
+  Ole = new ORichEdit(component);
 }
 
 RichEditSpell::~RichEditSpell()
 {
-  delete ole;
+  delete ContextMenu;
+  delete Ole;
 }
 
-void RichEditSpell::FindTextRange(Range& range)
+void RichEditSpell::FindTextRange(NumRange& Range)
 {
-  range = FindTextRange(ole->SelRange.Start);
+  Range = FindTextRange(Ole->SelRange.Start);
 }
 
-Range RichEditSpell::FindTextRange(int pos)
+NumRange RichEditSpell::FindTextRange(int Pos)
 {
   int start, end;
+  UnicodeString text;
 
-  std::wstring buf = ole->GetFullText();
+  Ole->GetFullText(text);
+  wchar_t* buf = text.c_str();
 
-  for (start = pos; start - 1 > 0 && ISALNUM(buf[start - 1]); --start);
-  for (end = pos; end < buf.size() && ISALNUM(buf[end]); ++end);
+  for (start = Pos; start - 1 >= 0 && ISALNUM(buf[start - 1]); --start);
+  for (end = Pos; end < text.Length() && ISALNUM(buf[end]); ++end);
 
-  return Range(start, end);
+  return NumRange(start, end);
 }
 
-bool RichEditSpell::IsCorrect(int pos)
+bool RichEditSpell::IsCorrect(int Pos)
 {
-  if (pos != CURRENT_POS)
+  if (Pos != CURRENT_POS)
   {
-    ole->SetTextRange(Range(pos, pos));
-    return (ole->GetTextColor() != clRed);
+    Ole->SetTextRange(NumRange(Pos, Pos));
+    return (Ole->GetTextColor() != clRed);
   }
 
-  return (ole->GetSelColor() != clRed);
+  return (Ole->GetSelColor() != clRed);
 }
 
-void RichEditSpell::MarkAsMisspell(Range range)
+void RichEditSpell::MarkAsMisspell(NumRange Range)
 {
   OnChangeBlocked = true;
-  ole->TextRange = range;
-  ole->SetTextColor(clRed);
+  Ole->TextRange = Range;
+  Ole->SetTextColor(clRed);
   OnChangeBlocked = false;
 }
 
-void RichEditSpell::UnmarkAsMisspell(Range range)
+void RichEditSpell::UnmarkAsMisspell(NumRange Range)
 {
   OnChangeBlocked = true;
-  ole->TextRange = range;
-  ole->SetTextColor(tomAutoColor);
+  Ole->TextRange = Range;
+  Ole->SetTextColor(tomAutoColor);
   OnChangeBlocked = false;
 }
 
-void RichEditSpell::PerformSpell(Range range)
+void RichEditSpell::PerformSpell(NumRange Range)
 {
-  if (range.Length() == 0)
+  if (Range.Length() == 0)
     return;
 
-  speller.CheckText(ole->GetTextFromRange(range));
+  UnicodeString text;
+  speller.CheckText(Ole->GetTextFromRange(Range, text));
 
-  Range word;
-  for (unsigned i = 0; i < speller.Result.size(); ++i)
+  NumRange word;
+  for (int i = 0; i < speller.Result.Length; ++i)
   {
-    word.Start = speller.Result[i].pos + range.Start;
+    word.Start = speller.Result[i].pos + Range.Start;
     word.End   = speller.Result[i].len + word.Start;
     MarkAsMisspell(word);
   }
 }
 
-std::vector<std::wstring>& RichEditSpell::GetSuggestions(int pos)
-{
-  return speller.Result[0].s;
-}

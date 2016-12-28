@@ -2,22 +2,27 @@
 #define RichEditSpellH
 
 #include <vcl.h>
-#include <locale>
 
 #include "YandexSpeller.h"
 #include "ORichEdit.h"
 #include "defines.h"
 
-class ContextMenu
+class RichEditSpell;
+
+class CustomContextMenu
 {
   public:
-    ContextMenu();
-    ~ContextMenu();
+    CustomContextMenu(RichEditSpell* Owner);
+    ~CustomContextMenu();
 
-    void Create(TPopupMenu* menu, DynamicArray<UnicodeString>& suggs);
+    void Create(NumRange Word, bool hasSuggestions, bool selLen);
+    void Show(int X, int Y);
+
+    void Create(DynamicArray<UnicodeString>* Suggestions);
+    void RemoveAllItems();
+
     void __fastcall OnMenuItemClick(TObject* Sender);
 
-    void __fastcall Undo(TObject* Sender);
     void __fastcall Cut(TObject* Sender);
     void __fastcall Copy(TObject* Sender);
     void __fastcall Paste(TObject* Sender);
@@ -25,26 +30,29 @@ class ContextMenu
     void __fastcall SelectAll(TObject* Sender);
 
   private:
-    TMenuItem* _defaults[6];
+    RichEditSpell*  owner;
+    TPopupMenu*     popupmenu;
+    TMenuItem*      defaults[5];
 };
 
 class RichEditSpell
 {
+  friend class CustomContextMenu;
+
   public:
-    RichEditSpell(TRichEdit* edit);
+    RichEditSpell(TRichEdit* Component);
     ~RichEditSpell();
 
-    void  FindTextRange(Range& range);
-    Range FindTextRange(int pos);
+    void FindTextRange(NumRange& Range);
+    NumRange FindTextRange(int Pos);
 
-    bool IsCorrect(int pos = CURRENT_POS);
-    void MarkAsMisspell(Range range);
-    void UnmarkAsMisspell(Range range);
-    void PerformSpell(Range range);
+    bool IsCorrect(int Pos = CURRENT_POS);
+    void MarkAsMisspell(NumRange Range);
+    void UnmarkAsMisspell(NumRange Range);
+    void PerformSpell(NumRange Range);
 
-    std::vector<std::wstring>& GetSuggestions(int pos);
-
-    ORichEdit* ole;
+    ORichEdit* Ole;
+    CustomContextMenu* ContextMenu;
 
   private:
     TRichEdit*     component;

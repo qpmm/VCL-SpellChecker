@@ -4,16 +4,15 @@
 #include <vcl.h>
 #include <richole.h>
 #include <tom.h>
-#include <string>
 
-class Range
+class NumRange
 {
   public:
-    Range();
-    Range(long start, long end);
+    NumRange();
+    NumRange(long start, long end);
     
-    int  ToInt();
-    static Range FromInt(int src);
+    int ToInt();
+    static NumRange FromInt(int src);
 
     long Length();
 
@@ -24,40 +23,32 @@ class Range
 class ORichEdit
 {
   public:
-    ORichEdit(TRichEdit* component);
+    ORichEdit(TRichEdit* Component);
+    ~ORichEdit();
 
-    __property Range SelRange = {read = GetSelRange, write = SetSelRange};
-    __property Range TextRange = {read = GetTextRange, write = SetTextRange};
-    __property Range SelText = {read = GetSelText, write = SetSelText};
-    __property Range Text = {read = GetText, write = SetText};
+    __property NumRange SelRange = {read = GetSelRange, write = SetSelRange};
+    __property NumRange TextRange = {read = GetTextRange, write = SetTextRange};
 
-    Range        GetSelRange();
-    void         SetSelRange(Range r);
+    NumRange        GetSelRange();
+    NumRange        GetTextRange();
+    UnicodeString&  GetText(UnicodeString& dest);
+    UnicodeString&  GetTextFromRange(NumRange Range, UnicodeString& dest);
+    int             GetSelColor();
+    int             GetTextColor();
 
-    Range        GetTextRange();
-    void         SetTextRange(Range r);
+    void            SetSelRange(NumRange Range);
+    void            SetTextRange(NumRange Range);
+    void            SetText(wchar_t* str);
+    void            SetTextInRange(NumRange Range, wchar_t* str);
+    void            SetTextColor(int color);
 
-    std::wstring GetSelText();
-    void         SetSelText(wchar_t* text);
-
-    std::wstring GetText();
-    void         SetText(wchar_t* text);
-
-    std::wstring GetTextFromRange(Range r);
-    void         SetTextInRange(Range r, wchar_t* text);
-
-    int          GetSelColor();
-    int          GetTextColor();
-    void         SetTextColor(int color);
-
-    Range        GetTextBounds();
-    std::wstring GetFullText();
+    NumRange        GetTextBounds();
+    UnicodeString&  GetFullText(UnicodeString& dest);
 
   private:
-    ITextDocument*   doc;
-    ITextSelection*  sel;
-    ITextRange*      range;
-    ITextFont*       style;
+    ITextDocument*  doc;
+    ITextRange*     txt;
+    ITextFont*      style;
 };
 
 #endif

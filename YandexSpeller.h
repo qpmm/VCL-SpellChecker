@@ -3,8 +3,6 @@
 
 #include <IdHTTP.hpp>
 #include <DBXJSON.hpp>
-#include <string>
-#include <vector>
 
 struct ResponseObject
 {
@@ -13,8 +11,8 @@ struct ResponseObject
   int row;
   int col;
   int len;
-  std::wstring word;
-  std::vector<std::wstring> s;
+  UnicodeString word;
+  DynamicArray<UnicodeString> s;
 };
 
 class YandexSpeller
@@ -23,16 +21,16 @@ class YandexSpeller
     YandexSpeller();
     ~YandexSpeller();
   
-    TJSONArray* MakeRequest(std::wstring content);
-    void ParseJSON(TJSONArray* content);
-    void CheckText(std::wstring text);
+    TJSONValue* MakeRequest(UnicodeString& text);
+    void ParseJSON(TJSONArray* json);
+    void CheckText(UnicodeString text);
 
-    std::vector<ResponseObject> Result;
+    DynamicArray<ResponseObject> Result;
     
   private:
     TIdHTTP*        httpModule;
     TStringStream*  buffer;
-    std::wstring    urlTemplate;
+    UnicodeString   urlTemplate;
     int             urlLength;
 };
 

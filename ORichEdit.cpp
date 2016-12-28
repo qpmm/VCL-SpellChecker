@@ -1,28 +1,28 @@
 #include "ORichEdit.h"
 
-Range::Range()
+NumRange::NumRange()
 {
   Start = 0;
   End = 0;
 }
 
-Range::Range(long start, long end)
+NumRange::NumRange(long start, long end)
 {
   Start = start;
   End = end;
 }
 
-int Range::ToInt()
+int NumRange::ToInt()
 {
   return (End | (Start << 16));
 }
 
-Range Range::FromInt(int src)
+NumRange NumRange::FromInt(int src)
 {
-  return Range(src >> 16, (src << 16) >> 16);
+  return NumRange(src >> 16, (src << 16) >> 16);
 }
 
-long Range::Length()
+long NumRange::Length()
 {
   return (End - Start);
 }
@@ -33,91 +33,93 @@ ORichEdit::ORichEdit(TRichEdit* component)
 
   component->Perform(EM_GETOLEINTERFACE, 0, (int)&intf);
   intf->QueryInterface(__uuidof(ITextDocument), (void**)&doc);
-  doc->Range(0, 0, &range);
+  doc->Range(0, 0, &txt);
+  intf->Release();
 }
 
-Range ORichEdit::GetSelRange()
+ORichEdit::~ORichEdit()
 {
-  Range r;
+  txt->Release();
+  doc->Release();
+}
+
+NumRange ORichEdit::GetSelRange()
+{
+  ITextSelection* sel;
+  NumRange Range;
 
   doc->GetSelection(&sel);
-  sel->GetStart(&r.Start);
-  sel->GetEnd(&r.End);
+  sel->GetStart(&Range.Start);
+  sel->GetEnd(&Range.End);
+  sel->Release();
 
-  return r;
+  return Range;
 }
 
-void ORichEdit::SetSelRange(Range r)
+void ORichEdit::SetSelRange(NumRange Range)
 {
+  ITextSelection* sel;
+
   doc->GetSelection(&sel);
-  sel->SetRange(r.Start, r.End);
+  sel->SetRange(Range.Start, Range.End);
+  sel->Release();
 }
 
-Range ORichEdit::GetTextRange()
+NumRange ORichEdit::GetTextRange()
 {
-  Range r;
+  NumRange Range;
 
-  range->GetStart(&r.Start);
-  range->GetEnd(&r.End);
+  txt->GetStart(&Range.Start);
+  txt->GetEnd(&Range.End);
 
-  return r;
+  return Range;
 }
 
-void ORichEdit::SetTextRange(Range r)
+void ORichEdit::SetTextRange(NumRange Range)
 {
-  doc->Range(r.Start, r.End, &range);
+  txt->Release();
+  doc->Range(Range.Start, Range.End, &txt);
 }
 
-std::wstring ORichEdit::GetSelText()
-{
-  doc->GetSelection((ITextSelection**)&range);
-  return GetText();
-}
-
-void ORichEdit::SetSelText(wchar_t* text)
-{
-  doc->GetSelection((ITextSelection**)&range);
-  SetText(text);
-}
-
-std::wstring ORichEdit::GetText()
+UnicodeString& ORichEdit::GetText(UnicodeString& dest)
 {
   wchar_t* buf;
-  range->GetText(&buf);
-  return std::wstring(buf);
+
+  txt->GetText(&buf);
+  dest = buf;
+
+  return dest;
 }
 
-void ORichEdit::SetText(wchar_t* text)
+void ORichEdit::SetText(wchar_t* str)
 {
-  // Создается копия, т.к. ПОЧЕМУ-ТО текст вставляется не целиком, если просто передать указатель
-  std::wstring stroka = text;
-  range->SetText((wchar_t*)stroka.c_str());
+  wchar_t *buf = SysAllocString(str);
+  txt->SetText(buf);
+  SysFreeString(buf);
 }
 
-std::wstring ORichEdit::GetTextFromRange(Range r)
+UnicodeString& ORichEdit::GetTextFromRange(NumRange Range, UnicodeString& dest)
 {
-  SetTextRange(r);
-  return GetText();
+  SetTextRange(Range);
+  return GetText(dest);
 }
 
-void ORichEdit::SetTextInRange(Range r, wchar_t* text)
+void ORichEdit::SetTextInRange(NumRange Range, wchar_t* str)
 {
-  SetTextRange(r);
-  SetText(text);
+  SetTextRange(Range);
+  SetText(str);
 }
 
 int ORichEdit::GetSelColor()
 {
-  //Range selection;
+  ITextSelection* sel;
   long color;
 
   doc->GetSelection(&sel);
-  //  selection = GetSelRange();
-
-  //  if (selection.Length() == 0)
-  //    sel->SetEnd(selection.Start + 1);
   sel->GetFont(&style);
   style->GetForeColor(&color);
+  style->Release();
+  sel->Release();
 
   return color;
 }
@@ -126,30 +128,34 @@ int ORichEdit::GetTextColor()
 {
   long color;
 
-  range->GetFont(&style);
+  txt->GetFont(&style);
   style->GetForeColor(&color);
+  style->Release();
 
   return color;
 }
 
 void ORichEdit::SetTextColor(int color)
 {
-  range->GetFont(&style);
+  txt->GetFont(&style);
   style->SetForeColor(color);
-  range->SetFont(style);
+  txt->SetFont(style);
+  style->Release();
 }
 
-Range ORichEdit::GetTextBounds()
+NumRange ORichEdit::GetTextBounds()
 {
+  ITextSelection* sel;
   long length;
 
   doc->GetSelection(&sel);
   sel->GetStoryLength(&length);
+  sel->Release();
 
-  return Range(0, length);
+  return NumRange(0, length);
 }
 
-std::wstring ORichEdit::GetFullText()
+UnicodeString& ORichEdit::GetFullText(UnicodeString& dest)
 {
-  return GetTextFromRange(GetTextBounds());
+  return GetTextFromRange(GetTextBounds(), dest);
 }

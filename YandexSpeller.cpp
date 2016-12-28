@@ -3,9 +3,8 @@
 YandexSpeller::YandexSpeller()
 {
   httpModule = new TIdHTTP(NULL);
-  urlTemplate.reserve(4096);
   urlTemplate = L"http://speller.yandex.net/services/spellservice.json/checkText?text=";
-  urlLength = urlTemplate.length();
+  urlLength = urlTemplate.Length();
   buffer = new TStringStream;
 }
 
@@ -15,49 +14,51 @@ YandexSpeller::~YandexSpeller()
   delete buffer;
 }
 
-TJSONArray* YandexSpeller::MakeRequest(std::wstring content)
+TJSONValue* YandexSpeller::MakeRequest(UnicodeString& text)
 {
-  buffer->Clear();
-  urlTemplate.append(content);
-  httpModule->Get(TIdURI::URLEncode(urlTemplate.c_str()), buffer);
+  UnicodeAppend(urlTemplate, text);
+  httpModule->Get(TIdURI::URLEncode(urlTemplate), buffer);
   httpModule->Disconnect();
-  urlTemplate.resize(urlLength);
+  urlTemplate.SetLength(urlLength);
 
-  return (TJSONArray*)(TJSONObject::ParseJSONValue(buffer->DataString));
+  TJSONValue* response = TJSONObject::ParseJSONValue(buffer->DataString);
+  buffer->Clear();
+
+  return response;
 }
 
-void YandexSpeller::CheckText(std::wstring text)
+void YandexSpeller::CheckText(UnicodeString text)
 {
-  ParseJSON(MakeRequest(text));
+  TJSONValue* json = MakeRequest(text);
+  ParseJSON((TJSONArray*)json);
+  json->Free();
 }
 
-void YandexSpeller::ParseJSON(TJSONArray* content)
+void YandexSpeller::ParseJSON(TJSONArray* json)
 {
-  if (content->Size() == 0)
+  if (json->Size() == 0)
   {
-    Result.clear();
+    Result.Length = 0;
     return;
   }
 
-  Result.resize(content->Size());
+  Result.Length = json->Size();
   
-  for (unsigned i = 0; i < Result.size(); ++i)
+  for (int i = 0; i < Result.Length; ++i)
   {
-    TJSONObject* item = (TJSONObject*)(content->Get(i));
+    TJSONObject* item = (TJSONObject*)(json->Get(i));
 
-    Result[i].code = ((TJSONNumber*)(item->Get(0)->JsonValue))->AsInt; // code
-    Result[i].pos  = ((TJSONNumber*)(item->Get(1)->JsonValue))->AsInt; // pos
-    Result[i].row  = ((TJSONNumber*)(item->Get(2)->JsonValue))->AsInt; // row
-    Result[i].col  = ((TJSONNumber*)(item->Get(3)->JsonValue))->AsInt; // col
-    Result[i].len  = ((TJSONNumber*)(item->Get(4)->JsonValue))->AsInt; // len
-    Result[i].word = ((TJSONString*)(item->Get(5)->JsonValue))->ToString().c_str(); // word
+    Result[i].code = ((TJSONNumber*)item->Get(0)->JsonValue)->AsInt;      // code
+    Result[i].pos  = ((TJSONNumber*)item->Get(1)->JsonValue)->AsInt;      // pos
+    Result[i].row  = ((TJSONNumber*)item->Get(2)->JsonValue)->AsInt;      // row
+    Result[i].col  = ((TJSONNumber*)item->Get(3)->JsonValue)->AsInt;      // col
+    Result[i].len  = ((TJSONNumber*)item->Get(4)->JsonValue)->AsInt;      // len
+    Result[i].word = ((TJSONString*)item->Get(5)->JsonValue)->ToString(); // word
 
-    TJSONArray* suggestions = (TJSONArray*)(item->Get(6)->JsonValue); // s
-    Result[i].s.resize(suggestions->Size());
+    TJSONArray* suggestions = (TJSONArray*)item->Get(6)->JsonValue;       // s
+    Result[i].s.Length = suggestions->Size();
 
-    for (unsigned j = 0; j < Result[i].s.size(); ++j)
-    {
-      Result[i].s[j] = ((TJSONString*)suggestions->Get(j))->Value().c_str();
-    }
+    for (int j = 0; j < Result[i].s.Length; ++j)
+      Result[i].s[j] = ((TJSONString*)suggestions->Get(j))->Value();
   }
 }
